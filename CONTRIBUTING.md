@@ -36,8 +36,13 @@ own transaction.
 
 ```sh
 cd scraper
-uv run dinnr-scrape
+uv run dinnr-scrape                                   # uses $DATABASE_URL, default the local dev DB
+uv run dinnr-scrape --database-url postgresql://...
 ```
+
+This fetches the **live** UNC pages (through the polite fetcher: robots.txt checked, ~5 s between
+requests) and saves today's menu (America/New_York date) for every hall in
+`scraper/src/dinnr/locations.py`. Re-running the same day updates rows in place.
 
 ## Tests
 

@@ -37,6 +37,21 @@ def db(migrated_database_url: str) -> Iterator[psycopg.Connection]:
 
 
 @pytest.fixture
+def clean_db(db: psycopg.Connection) -> psycopg.Connection:
+    """The migrated test DB with every app table (all but `schema_migrations`) emptied."""
+    tables = [
+        row[0]
+        for row in db.execute(
+            "select tablename from pg_tables where schemaname = 'public' and tablename <> 'schema_migrations'"
+        )
+    ]
+    if tables:
+        db.execute("truncate " + ", ".join(f'"{t}"' for t in tables) + " restart identity cascade")
+    db.commit()
+    return db
+
+
+@pytest.fixture
 def fresh_database_url(test_database_url: str) -> str:
     """An empty, unmigrated scratch database (named after the test database)."""
     url = with_database_name(test_database_url, suffix="_scratch")

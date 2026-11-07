@@ -1,5 +1,6 @@
-"""Helpers for tests that need a real Postgres database."""
+"""Helpers for tests: a fake fetcher serving saved fixtures, and test databases."""
 
+from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 import psycopg
@@ -27,3 +28,25 @@ def recreate_database(url: str) -> None:
     with psycopg.connect(admin_url, autocommit=True) as conn:
         conn.execute(sql.SQL("drop database if exists {} with (force)").format(sql.Identifier(name)))
         conn.execute(sql.SQL("create database {}").format(sql.Identifier(name)))
+
+
+# scraper/src/dinnr/testing.py -> repo root
+FIXTURES_DIR = Path(__file__).resolve().parents[3] / "fixtures" / "unc"
+
+
+class FakeFetcher:
+    """A `Fetcher` that serves saved fixture files and records every URL asked for.
+
+    `pages` maps a URL to a path relative to `fixtures/unc/`. Asking for any
+    other URL raises, so a test can never fall through to the live site.
+    """
+
+    def __init__(self, pages: dict[str, str]):
+        self.pages = dict(pages)
+        self.requested: list[str] = []
+
+    def get(self, url: str) -> str:
+        self.requested.append(url)
+        if url not in self.pages:
+            raise LookupError(f"FakeFetcher has no fixture for {url}")
+        return (FIXTURES_DIR / self.pages[url]).read_text()
