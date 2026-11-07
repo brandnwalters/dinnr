@@ -96,6 +96,30 @@ def save_menu(conn: psycopg.Connection, location: Location, day: date, menu: Men
     return menu_day_id
 
 
+def menu_day_item_count(conn: psycopg.Connection, menu_day_id: int) -> int:
+    return conn.execute(
+        "select count(*) from menu_item mi join meal_period mp on mp.id = mi.meal_period_id where mp.menu_day_id = %s",
+        (menu_day_id,),
+    ).fetchone()[0]
+
+
+def open_day_item_counts(conn: psycopg.Connection, location: Location, start: date, end: date) -> list[int]:
+    """Saved item counts of the location's open days with start <= date < end."""
+    rows = conn.execute(
+        """
+        select count(mi.id)
+        from menu_day md
+        join location l on l.id = md.location_id
+        left join meal_period mp on mp.menu_day_id = md.id
+        left join menu_item mi on mi.meal_period_id = mp.id
+        where l.slug = %s and md.status = 'open' and md.date >= %s and md.date < %s
+        group by md.id
+        """,
+        (location.slug, start, end),
+    )
+    return [row[0] for row in rows.fetchall()]
+
+
 def nutrition_fetched_at(conn: psycopg.Connection, recipe_ids: Iterable[int]) -> dict[int, datetime]:
     """When each of `recipe_ids` last had its nutrition saved (ids never saved are absent)."""
     rows = conn.execute(
