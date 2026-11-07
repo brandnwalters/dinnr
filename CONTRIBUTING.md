@@ -91,3 +91,9 @@ The live UNC site is touched only by the scraper itself, never by tests. Never r
 (robots.txt disallows them). Use the User-Agent
 `dinnr/<version> (+https://github.com/brandnwalters/dinnr; contact: bmwal@unc.edu)` and pause several
 seconds between requests.
+
+## Production
+
+The scheduled scrape (`.github/workflows/scrape.yml`) writes to Neon Postgres and the web app runs on
+Vercel. Architecture, the cron-time reasoning and the one-time human setup are in
+[`docs/deploy.md`](docs/deploy.md).
