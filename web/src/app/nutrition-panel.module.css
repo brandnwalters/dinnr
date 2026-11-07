@@ -1,0 +1,70 @@
+/* The item name in the menu list: looks like text, behaves like a button. */
+.trigger {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+/* A bottom sheet on phones... */
+.panel {
+  width: 100%;
+  max-width: 100%;
+  max-height: 85vh;
+  margin: auto 0 0;
+  padding: 1rem;
+  border: none;
+  border-radius: 1rem 1rem 0 0;
+  overflow-y: auto;
+}
+
+.panel::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+/* ...and a centered dialog from tablet width up. */
+@media (min-width: 768px) {
+  .panel {
+    width: 28rem;
+    margin: auto;
+    border-radius: 0.75rem;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+}
+
+.close {
+  font: inherit;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.label {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.label th,
+.label td {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgb(0 0 0 / 15%);
+  font-weight: normal;
+  text-align: left;
+}
+
+.label td {
+  text-align: right;
+}
+
+.indent {
+  padding-left: 1rem !important;
+}
