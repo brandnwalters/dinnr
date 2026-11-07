@@ -5,6 +5,7 @@ description = "Polite scraper for UNC dining hall menus and nutrition"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "beautifulsoup4>=4.15.0",
     "psycopg[binary]>=3.2",
 ]
 
