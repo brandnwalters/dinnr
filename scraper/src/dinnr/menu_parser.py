@@ -24,6 +24,10 @@ class MenuItem:
     recipe_id: int
     dietary_tags: tuple[str, ...] = ()  # `prop-<code>` codes in page order, e.g. ("vegan", "halal")
 
+    @property
+    def normalized_name(self) -> str:
+        return normalize_name(self.name)
+
 
 @dataclass(frozen=True)
 class Station:
@@ -48,6 +52,11 @@ class Menu:
     def closed(self) -> bool:
         """A page with no meal periods means the hall is closed that day."""
         return not self.meal_periods
+
+
+def normalize_name(name: str) -> str:
+    """How favorites match a dish: lowercased, trimmed, whitespace collapsed."""
+    return " ".join(name.split()).lower()
 
 
 def _text(tag: Tag) -> str:
