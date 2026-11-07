@@ -28,8 +28,13 @@ test("returns today's menu grouped by meal period, then station, in page order",
     location: LENOIR,
     date: "2026-11-07",
     mealPeriods: [
-      { name: "Continental", stations: [{ name: "Waffle Bar", items: [{ name: "Waffle", recipeId: 8260 }] }] },
-      { name: "Brunch", stations: brunchStations },
+      {
+        name: "Continental",
+        start: "10:00",
+        end: "11:00",
+        stations: [{ name: "Waffle Bar", items: [{ name: "Waffle", recipeId: 8260 }] }],
+      },
+      { name: "Brunch", start: "11:00", end: "15:00", stations: brunchStations },
     ],
   });
 
@@ -41,9 +46,17 @@ test("returns today's menu grouped by meal period, then station, in page order",
       {
         slug: "top-of-lenoir",
         name: "Top of Lenoir",
+        status: "serving",
+        currentMealPeriod: "Brunch",
+        selectedMealPeriod: "Brunch",
         mealPeriods: [
-          { name: "Continental", stations: [{ name: "Waffle Bar", items: [{ name: "Waffle", recipeId: 8260 }] }] },
-          { name: "Brunch", stations: brunchStations },
+          {
+            name: "Continental",
+            start: "10:00",
+            end: "11:00",
+            stations: [{ name: "Waffle Bar", items: [{ name: "Waffle", recipeId: 8260 }] }],
+          },
+          { name: "Brunch", start: "11:00", end: "15:00", stations: brunchStations },
         ],
       },
     ],
@@ -88,7 +101,7 @@ test("'today' is the date in Chapel Hill, not UTC", async () => {
   expect(today.halls[0].mealPeriods[0].stations[0].items[0].name).toBe("Saturday burger");
 });
 
-test("a hall with no menu saved for today is listed with no meal periods", async () => {
+test("a hall with no menu saved for today is listed as 'no-menu' with no meal periods", async () => {
   await seedLocation(LENOIR);
   await seedMenuDay({
     location: LENOIR,
@@ -98,5 +111,112 @@ test("a hall with no menu saved for today is listed with no meal periods", async
 
   const today = await getToday({ now: SAT_LUNCHTIME });
 
-  expect(today.halls).toEqual([{ slug: "top-of-lenoir", name: "Top of Lenoir", mealPeriods: [] }]);
+  expect(today.halls).toEqual([
+    {
+      slug: "top-of-lenoir",
+      name: "Top of Lenoir",
+      status: "no-menu",
+      currentMealPeriod: null,
+      selectedMealPeriod: null,
+      mealPeriods: [],
+    },
+  ]);
+});
+
+// Meal hours and the current / next meal period. A weekday at Lenoir (EST, UTC-5).
+const station = (item: string, recipeId: number) => [
+  { name: "The Grill", items: [{ name: item, recipeId }] },
+];
+const weekday = () =>
+  seedMenuDay({
+    location: LENOIR,
+    date: "2026-11-09",
+    mealPeriods: [
+      { name: "Breakfast", start: "07:00", end: "10:30", stations: station("Pancakes", 1) },
+      { name: "Lunch", start: "11:00", end: "15:00", stations: station("Burger", 2) },
+      { name: "Dinner", start: "17:00", end: "20:00", stations: station("Steak", 3) },
+    ],
+  });
+/** `hhmm` on Monday 2026-11-09 in Chapel Hill. */
+const mondayAt = (hhmm: string) => new Date(`2026-11-09T${hhmm}:00-05:00`);
+
+test("during a meal, the hall is serving and that meal is selected", async () => {
+  await weekday();
+
+  const [hall] = (await getToday({ now: mondayAt("12:30") })).halls;
+
+  expect(hall.status).toBe("serving");
+  expect(hall.currentMealPeriod).toBe("Lunch");
+  expect(hall.selectedMealPeriod).toBe("Lunch");
+  expect(hall.mealPeriods.map((mp) => [mp.name, mp.start, mp.end])).toEqual([
+    ["Breakfast", "07:00", "10:30"],
+    ["Lunch", "11:00", "15:00"],
+    ["Dinner", "17:00", "20:00"],
+  ]);
+});
+
+test.each([
+  ["06:00", "Breakfast"], // before the first meal
+  ["10:45", "Lunch"],
+  ["15:00", "Dinner"], // Lunch ends at 15:00 sharp
+  ["16:00", "Dinner"],
+])("between meals at %s, the next meal (%s) is selected", async (time, next) => {
+  await weekday();
+
+  const [hall] = (await getToday({ now: mondayAt(time) })).halls;
+
+  expect([hall.status, hall.currentMealPeriod, hall.selectedMealPeriod]).toEqual(["opens-later", next, next]);
+});
+
+test("after the last meal, the hall is done for today", async () => {
+  await weekday();
+
+  const [hall] = (await getToday({ now: mondayAt("20:00") })).halls;
+
+  expect([hall.status, hall.currentMealPeriod, hall.selectedMealPeriod]).toEqual(["done-for-today", null, null]);
+  // Today's meals are still there to switch to.
+  expect(hall.mealPeriods.map((mp) => mp.name)).toEqual(["Breakfast", "Lunch", "Dinner"]);
+});
+
+test("a hall saved as closed for the day is reported closed", async () => {
+  await seedMenuDay({ location: LENOIR, date: "2026-11-09", mealPeriods: [] });
+
+  const [hall] = (await getToday({ now: mondayAt("12:30") })).halls;
+
+  expect(hall).toEqual({
+    slug: "top-of-lenoir",
+    name: "Top of Lenoir",
+    status: "closed-today",
+    currentMealPeriod: null,
+    selectedMealPeriod: null,
+    mealPeriods: [],
+  });
+});
+
+test("switching to another of today's meals selects it but keeps the status at now", async () => {
+  await weekday();
+
+  const [hall] = (await getToday({ now: mondayAt("12:30"), mealPeriod: "Dinner" })).halls;
+
+  expect([hall.status, hall.currentMealPeriod, hall.selectedMealPeriod]).toEqual(["serving", "Lunch", "Dinner"]);
+});
+
+test("a switched-to meal a hall doesn't serve falls back to that hall's current meal", async () => {
+  await weekday();
+  const CHASE = { slug: "chase", name: "Chase" };
+  await seedMenuDay({
+    location: CHASE,
+    date: "2026-11-09",
+    mealPeriods: [
+      { name: "Lunch", start: "11:00", end: "15:00", stations: station("Pizza", 4) },
+      { name: "Late Lunch", start: "15:00", end: "17:00", stations: station("Wings", 5) },
+    ],
+  });
+
+  const halls = (await getToday({ now: mondayAt("12:30"), mealPeriod: "Late Lunch" })).halls;
+
+  expect(halls.map((h) => [h.slug, h.selectedMealPeriod])).toEqual([
+    ["top-of-lenoir", "Lunch"],
+    ["chase", "Late Lunch"],
+  ]);
 });
