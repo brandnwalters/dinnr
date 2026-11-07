@@ -6,7 +6,7 @@ import { query } from "@/lib/db";
  * inserts) as later tickets add columns.
  */
 
-export type SeedItem = { name: string; recipeId: number };
+export type SeedItem = { name: string; recipeId: number; dietaryTags?: string[] };
 export type SeedStation = { name: string; items: SeedItem[] };
 /** `start`/`end` are local wall-clock times ("HH:MM"); omit for a label without hours. */
 export type SeedMealPeriod = { name: string; start?: string; end?: string; stations: SeedStation[] };
@@ -89,9 +89,9 @@ export async function seedMenuDay(day: SeedMenuDay): Promise<void> {
       );
       for (const item of station.items) {
         await query(
-          `insert into menu_item (meal_period_id, station_id, recipe_id, name, position)
-           values ($1, $2, $3, $4, $5)`,
-          [mp.id, st.id, item.recipeId, item.name, position++],
+          `insert into menu_item (meal_period_id, station_id, recipe_id, name, position, dietary_tags)
+           values ($1, $2, $3, $4, $5, $6)`,
+          [mp.id, st.id, item.recipeId, item.name, position++, item.dietaryTags ?? []],
         );
       }
     }

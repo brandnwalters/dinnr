@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DietaryTagBadges } from "./dietary-tag-badges";
 import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
 
 /** "140 cal · 25 g protein", leaving out whatever the label doesn't give. */
@@ -71,6 +72,7 @@ export function HallMenu({ hall }: { hall: Hall }) {
             {selected.name}
             {hours(selected) && ` · ${hours(selected)}`}
           </h3>
+          {selected.stations.length === 0 && <p>No items match your filters.</p>}
           {selected.stations.map((station) => (
             <section key={station.name}>
               <h4>{station.name}</h4>
@@ -78,6 +80,7 @@ export function HallMenu({ hall }: { hall: Hall }) {
                 {station.items.map((item) => (
                   <li key={item.recipeId} data-recipe={item.recipeId}>
                     {item.name}
+                    <DietaryTagBadges tags={item.dietaryTags} />
                     <MacroSummary item={item} />
                   </li>
                 ))}

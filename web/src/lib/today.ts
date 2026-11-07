@@ -1,4 +1,5 @@
 import { query } from "./db";
+import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
 
 /**
  * Today data layer (server side): what each hall serves today, shaped the way
@@ -6,10 +7,14 @@ import { query } from "./db";
  *
  * Each hall gets a status at `now` and a current meal period: the one being
  * served, else the next one today. All times are America/New_York. Items carry
- * their recipe's main macros when its nutrition has been fetched.
+ * their recipe's main macros when its nutrition has been fetched, and their
+ * dietary tags.
  *
- * Later slices extend this: preferences (favorites first, allergen/diet
- * filtering).
+ * `preferences` (the on-device settings, validated with `parsePreferences`)
+ * filter what's returned: diet filters are strict cutoffs, so an item missing
+ * any filtered tag is left out, as is a station left with no items.
+ *
+ * Later slices extend this: more preferences (favorites first, allergens).
  */
 
 export const DINING_TIME_ZONE = "America/New_York";
@@ -26,8 +31,11 @@ export type ItemNutrition = {
   carbsG: number | null;
   fatG: number | null;
 };
-/** `nutrition` is absent when the recipe's nutrition hasn't been fetched yet. */
-export type MenuItem = { name: string; recipeId: number; nutrition?: ItemNutrition };
+/**
+ * `dietaryTags` are UNC codes (see `dietary-tags.ts`), in page order.
+ * `nutrition` is absent when the recipe's nutrition hasn't been fetched yet.
+ */
+export type MenuItem = { name: string; recipeId: number; dietaryTags: string[]; nutrition?: ItemNutrition };
 export type Station = { name: string; items: MenuItem[] };
 /** `start`/`end` are local wall-clock times "HH:MM", or null if UNC's label had no readable hours. */
 export type MealPeriod = { name: string; start: string | null; end: string | null; stations: Station[] };
@@ -57,6 +65,7 @@ export type TodayOptions = {
   now: Date;
   /** A meal period the user switched to (by name), applied to each hall that serves it today. */
   mealPeriod?: string;
+  preferences?: Preferences;
 };
 
 /** The calendar date (YYYY-MM-DD) in Chapel Hill at `now`. */
@@ -112,6 +121,7 @@ type Row = {
   station_name: string | null;
   item_name: string | null;
   recipe_id: number | null;
+  dietary_tags: string[] | null;
   has_nutrition: boolean;
   serving_size: string | null;
   calories: number | null;
@@ -122,12 +132,16 @@ type Row = {
 
 type HallRows = { slug: string; name: string; menuStatus: string | null; mealPeriods: MealPeriod[] };
 
-export async function getToday({ now, mealPeriod: requested }: TodayOptions): Promise<TodayMenu> {
+export async function getToday({
+  now,
+  mealPeriod: requested,
+  preferences = DEFAULT_PREFERENCES,
+}: TodayOptions): Promise<TodayMenu> {
   const date = diningDate(now);
   const rows = await query<Row>(
     `select l.id as location_id, l.slug, l.name as location_name, md.status as menu_status,
             mp.id as meal_period_id, mp.name as meal_period_name, mp.start_time, mp.end_time,
-            s.name as station_name, mi.name as item_name, mi.recipe_id,
+            s.name as station_name, mi.name as item_name, mi.recipe_id, mi.dietary_tags,
             rn.recipe_id is not null as has_nutrition, rn.serving_size,
             rn.calories::float8 as calories, rn.protein_g::float8 as protein_g,
             rn.total_carbohydrate_g::float8 as carbs_g, rn.total_fat_g::float8 as fat_g
@@ -135,10 +149,11 @@ export async function getToday({ now, mealPeriod: requested }: TodayOptions): Pr
      left join menu_day md on md.location_id = l.id and md.date = $1
      left join meal_period mp on mp.menu_day_id = md.id
      left join menu_item mi on mi.meal_period_id = mp.id
+       and mi.dietary_tags @> $2::text[] -- diet filters: every one required
      left join station s on s.id = mi.station_id
      left join recipe_nutrition rn on rn.recipe_id = mi.recipe_id
      order by l.id, mp.position, mi.position`,
-    [date],
+    [date, preferences.dietFilters],
   );
 
   const halls = new Map<number, HallRows>();
@@ -170,7 +185,7 @@ export async function getToday({ now, mealPeriod: requested }: TodayOptions): Pr
       station = { name: row.station_name!, items: [] };
       mealPeriod.stations.push(station);
     }
-    const item: MenuItem = { name: row.item_name, recipeId: row.recipe_id! };
+    const item: MenuItem = { name: row.item_name, recipeId: row.recipe_id!, dietaryTags: row.dietary_tags! };
     if (row.has_nutrition) {
       item.nutrition = {
         servingSize: row.serving_size,
