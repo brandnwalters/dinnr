@@ -75,3 +75,10 @@ Neon. If the page is empty, check the latest **scrape** run succeeded today.
   hits the live UNC site through the polite fetcher; don't loop it.
 - GitHub disables scheduled workflows after 60 days without repository activity. If the menu stops
   updating, check the Actions tab and re-enable the workflow.
+- **Raw page archive**: every run saves a gzipped copy of each page it fetched, named by location and
+  run time (`archive/<YYYYMMDDTHHMMSSZ>/<location-slug>.html.gz`, nutrition responses as
+  `recipe-<id>.json.gz`), so past days can be re-parsed after a parser bug is fixed. Locally this goes
+  to `scraper/archive/` (gitignored; override with `--archive-dir` or `$DINNR_ARCHIVE_DIR`). In CI the
+  folder is uploaded as the `raw-pages-<run id>-<attempt>` artifact, even when the scrape fails.
+  **GitHub deletes artifacts after 90 days**, so download any you need before then. The planned
+  long-term home is Vercel Blob or a storage bucket (not built yet).

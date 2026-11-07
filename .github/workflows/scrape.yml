@@ -57,3 +57,16 @@ jobs:
 
       - name: Scrape today's menus
         run: uv run --no-dev dinnr-scrape
+
+      # Gzipped copies of every fetched page (written to scraper/archive/ by
+      # dinnr-scrape), kept so past days can be re-parsed after a parser fix.
+      # Uploaded even when the scrape fails: that is when the raw page matters
+      # most. Artifacts expire after 90 days (see docs/deploy.md).
+      - name: Upload raw page archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-pages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: scraper/archive/
+          retention-days: 90
+          if-no-files-found: warn
