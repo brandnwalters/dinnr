@@ -5,6 +5,7 @@ import { closeDb } from "./db";
 import { getToday } from "./today";
 
 const LENOIR = { slug: "top-of-lenoir", name: "Top of Lenoir" };
+const CHASE = { slug: "chase", name: "Chase" };
 
 // Saturday 2026-11-07, 12:30 in Chapel Hill (EST, UTC-5).
 const SAT_LUNCHTIME = new Date("2026-11-07T17:30:00Z");
@@ -203,7 +204,6 @@ test("switching to another of today's meals selects it but keeps the status at n
 
 test("a switched-to meal a hall doesn't serve falls back to that hall's current meal", async () => {
   await weekday();
-  const CHASE = { slug: "chase", name: "Chase" };
   await seedMenuDay({
     location: CHASE,
     date: "2026-11-09",
@@ -218,5 +218,53 @@ test("a switched-to meal a hall doesn't serve falls back to that hall's current 
   expect(halls.map((h) => [h.slug, h.selectedMealPeriod])).toEqual([
     ["top-of-lenoir", "Lunch"],
     ["chase", "Late Lunch"],
+  ]);
+});
+
+test("returns both halls, each with its own menu", async () => {
+  const brunch = { name: "Brunch", start: "11:00", end: "15:00" };
+  const waffles = [{ name: "Waffle Bar", items: [{ name: "Waffle", recipeId: 8260 }] }];
+  const lateLunch = { name: "Late Lunch", start: "15:00", end: "17:00" };
+  const pizza = [{ name: "Pizza", items: [{ name: "Pepperoni Pizza", recipeId: 7718 }] }];
+  await seedMenuDay({ location: LENOIR, date: "2026-11-07", mealPeriods: [{ ...brunch, stations: brunchStations }] });
+  await seedMenuDay({
+    location: CHASE,
+    date: "2026-11-07",
+    mealPeriods: [
+      { ...brunch, stations: waffles },
+      { ...lateLunch, stations: pizza },
+    ],
+  });
+
+  const today = await getToday({ now: SAT_LUNCHTIME });
+
+  const serving = { status: "serving", currentMealPeriod: "Brunch", selectedMealPeriod: "Brunch" };
+  expect(today.halls).toEqual([
+    { slug: "top-of-lenoir", name: "Top of Lenoir", ...serving, mealPeriods: [{ ...brunch, stations: brunchStations }] },
+    {
+      slug: "chase",
+      name: "Chase",
+      ...serving,
+      mealPeriods: [
+        { ...brunch, stations: waffles },
+        { ...lateLunch, stations: pizza },
+      ],
+    },
+  ]);
+});
+
+test("a hall with no menu today is still listed next to one that has a menu", async () => {
+  await seedLocation(LENOIR);
+  await seedMenuDay({
+    location: CHASE,
+    date: "2026-11-07",
+    mealPeriods: [{ name: "Brunch", start: "11:00", end: "15:00", stations: brunchStations }],
+  });
+
+  const today = await getToday({ now: SAT_LUNCHTIME });
+
+  expect(today.halls.map((h) => [h.slug, h.status, h.mealPeriods.length])).toEqual([
+    ["top-of-lenoir", "no-menu", 0],
+    ["chase", "serving", 1],
   ]);
 });
