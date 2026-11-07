@@ -1,3 +1,4 @@
+import { isAllergen, type Allergen } from "./allergens";
 import { isDietaryTag, type DietaryTag } from "./dietary-tags";
 
 /**
@@ -18,18 +19,22 @@ import { isDietaryTag, type DietaryTag } from "./dietary-tags";
 export type Preferences = {
   /** Strict cutoffs: an item must carry every one of these tags to be shown. */
   dietFilters: DietaryTag[];
+  /** Strict cutoffs: an item carrying any of these allergens is hidden. */
+  allergens: Allergen[];
 };
 
 export const PREFERENCES_VERSION = 1;
 
 export const DEFAULT_PREFERENCES: Preferences = {
   dietFilters: [],
+  allergens: [],
 };
 
 type FieldParsers = { [K in keyof Preferences]: (raw: unknown) => Preferences[K] | undefined };
 
 const FIELD_PARSERS: FieldParsers = {
   dietFilters: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isDietaryTag))] : undefined),
+  allergens: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isAllergen))] : undefined),
 };
 
 /** Upgrades stored data from version `v` to `v + 1`. Keyed by the version it upgrades from. */
