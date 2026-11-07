@@ -1,6 +1,6 @@
 """Seam 1: one scraper run against saved fixture pages, checked through the database."""
 
-from datetime import date
+from datetime import date, time
 
 from dinnr.locations import LOCATIONS
 from dinnr.run import scrape
@@ -89,3 +89,68 @@ def test_a_run_requests_only_the_location_pages(db, clean_db):
     scrape(db, fetcher, LOCATIONS, today=TODAY)
 
     assert fetcher.requested == [LENOIR_URL]
+
+
+def lenoir_day(db, day=TODAY):
+    """(status, [(meal period, start, end), ...]) for Lenoir on `day`."""
+    status = db.execute(
+        """
+        select md.status from menu_day md join location l on l.id = md.location_id
+        where l.slug = 'top-of-lenoir' and md.date = %s
+        """,
+        (day,),
+    ).fetchone()[0]
+    meal_periods = db.execute(
+        """
+        select mp.name, mp.start_time, mp.end_time
+        from meal_period mp
+        join menu_day md on md.id = mp.menu_day_id
+        join location l on l.id = md.location_id
+        where l.slug = 'top-of-lenoir' and md.date = %s
+        order by mp.position
+        """,
+        (day,),
+    ).fetchall()
+    return status, meal_periods
+
+
+def test_meal_period_hours_are_parsed_from_the_weekday_tabs(db, clean_db):
+    scrape(db, FakeFetcher({LENOIR_URL: "weekday-top-of-lenoir.html"}), LOCATIONS, today=TODAY)
+
+    # Tabs: "Breakfast (7am-10:30am)", "Lunch (11am-3pm)", "Dinner (5pm-8pm)".
+    assert lenoir_day(db) == (
+        "open",
+        [
+            ("Breakfast", time(7, 0), time(10, 30)),
+            ("Lunch", time(11, 0), time(15, 0)),
+            ("Dinner", time(17, 0), time(20, 0)),
+        ],
+    )
+
+
+def test_meal_period_hours_are_parsed_from_the_weekend_tabs(db, clean_db):
+    scrape(db, FakeFetcher({LENOIR_URL: "top-of-lenoir.html"}), LOCATIONS, today=TODAY)
+
+    # Real tabs: "Continental  (10am-11am)" (two spaces), "Brunch (11am-3pm)".
+    assert lenoir_day(db) == (
+        "open",
+        [("Continental", time(10, 0), time(11, 0)), ("Brunch", time(11, 0), time(15, 0))],
+    )
+
+
+def test_a_page_with_no_meal_periods_is_saved_as_closed(db, clean_db):
+    scrape(db, FakeFetcher({LENOIR_URL: "closed-top-of-lenoir.html"}), LOCATIONS, today=TODAY)
+
+    assert lenoir_day(db) == ("closed", [])
+
+
+def test_a_later_run_the_same_day_updates_open_closed_status(db, clean_db):
+    scrape(db, FakeFetcher({LENOIR_URL: "top-of-lenoir.html"}), LOCATIONS, today=TODAY)
+    scrape(db, FakeFetcher({LENOIR_URL: "closed-top-of-lenoir.html"}), LOCATIONS, today=TODAY)
+
+    assert lenoir_day(db) == ("closed", [])
+    assert lenoir_menu(db) == []
+
+    scrape(db, FakeFetcher({LENOIR_URL: "top-of-lenoir.html"}), LOCATIONS, today=TODAY)
+
+    assert lenoir_day(db)[0] == "open"

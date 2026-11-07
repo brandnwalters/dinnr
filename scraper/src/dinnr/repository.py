@@ -41,22 +41,24 @@ def save_menu(conn: psycopg.Connection, location: Location, day: date, menu: Men
         location_id = save_location(conn, location)
         menu_day_id = conn.execute(
             """
-            insert into menu_day (location_id, date) values (%s, %s)
-            on conflict (location_id, date) do update set scraped_at = now()
+            insert into menu_day (location_id, date, status) values (%s, %s, %s)
+            on conflict (location_id, date) do update set scraped_at = now(), status = excluded.status
             returning id
             """,
-            (location_id, day),
+            (location_id, day, "closed" if menu.closed else "open"),
         ).fetchone()[0]
 
         meal_period_ids = []
         for mp_position, meal_period in enumerate(menu.meal_periods):
             meal_period_id = conn.execute(
                 """
-                insert into meal_period (menu_day_id, name, position) values (%s, %s, %s)
-                on conflict (menu_day_id, name) do update set position = excluded.position
+                insert into meal_period (menu_day_id, name, position, start_time, end_time)
+                values (%s, %s, %s, %s, %s)
+                on conflict (menu_day_id, name) do update
+                set position = excluded.position, start_time = excluded.start_time, end_time = excluded.end_time
                 returning id
                 """,
-                (menu_day_id, meal_period.name, mp_position),
+                (menu_day_id, meal_period.name, mp_position, meal_period.start, meal_period.end),
             ).fetchone()[0]
             meal_period_ids.append(meal_period_id)
 
