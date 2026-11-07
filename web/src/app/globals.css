@@ -47,3 +47,27 @@ a {
     color-scheme: dark;
   }
 }
+
+.dietary-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+  list-style: none;
+}
+
+.dietary-tag {
+  padding: 0 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.diet-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 1rem 0;
+  padding: 0.5rem;
+}

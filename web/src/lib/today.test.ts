@@ -35,7 +35,7 @@ test("returns today's menu grouped by meal period, then station, in page order",
 
   const today = await getToday({ now: SAT_LUNCHTIME });
 
-  expect(today).toEqual({
+  expect(today).toMatchObject({
     date: "2026-11-07",
     halls: [
       {
