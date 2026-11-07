@@ -17,9 +17,14 @@ test("each item shows its calories and protein; items without nutrition still re
       hall={{
         slug: "top-of-lenoir",
         name: "Top of Lenoir",
+        status: "serving",
+        currentMealPeriod: "Brunch",
+        selectedMealPeriod: "Brunch",
         mealPeriods: [
           {
             name: "Brunch",
+            start: "11:00",
+            end: "15:00",
             stations: [
               {
                 name: "The Grill",

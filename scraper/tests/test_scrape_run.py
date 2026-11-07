@@ -1,6 +1,6 @@
 """Seam 1: one scraper run against saved fixture pages, checked through the database."""
 
-from datetime import date
+from datetime import date, time
 
 from dinnr.locations import LOCATIONS
 from dinnr.run import scrape
@@ -56,8 +56,8 @@ def all_menu_rows(db):
     """Every menu row in the database, ids included (menu_day.scraped_at left out: it records the latest run)."""
     queries = {
         "location": "select id, slug, name, url from location order by id",
-        "menu_day": "select id, location_id, date from menu_day order by id",
-        "meal_period": "select id, menu_day_id, name, position from meal_period order by id",
+        "menu_day": "select id, location_id, date, status from menu_day order by id",
+        "meal_period": "select id, menu_day_id, name, position, start_time, end_time from meal_period order by id",
         "station": "select id, name from station order by id",
         "menu_item": "select id, meal_period_id, station_id, recipe_id, name, position from menu_item order by id",
     }
@@ -151,3 +151,86 @@ def test_a_run_with_both_fixtures_saves_lenoir_and_chase(db, clean_db):
     assert len(chase) == 888
     assert list(dict.fromkeys(r[0] for r in chase)) == ["Continental", "Brunch", "Late Lunch", "Dinner"]
     assert chase[0] == ("Continental", "Waffle Bar", "Waffle", 8260)
+
+
+def hall_day(db, slug="top-of-lenoir", day=TODAY):
+    """(status, [(meal period, start, end), ...]) for one hall on `day`."""
+    status = db.execute(
+        """
+        select md.status from menu_day md join location l on l.id = md.location_id
+        where l.slug = %s and md.date = %s
+        """,
+        (slug, day),
+    ).fetchone()[0]
+    meal_periods = db.execute(
+        """
+        select mp.name, mp.start_time, mp.end_time
+        from meal_period mp
+        join menu_day md on md.id = mp.menu_day_id
+        join location l on l.id = md.location_id
+        where l.slug = %s and md.date = %s
+        order by mp.position
+        """,
+        (slug, day),
+    ).fetchall()
+    return status, meal_periods
+
+
+def lenoir_day(db):
+    return hall_day(db, "top-of-lenoir")
+
+
+def with_lenoir(fixture):
+    return FakeFetcher({**BOTH_HALLS, LENOIR_URL: fixture})
+
+
+def test_meal_period_hours_are_parsed_from_the_weekday_tabs(db, clean_db):
+    scrape(db, with_lenoir("weekday-top-of-lenoir.html"), LOCATIONS, today=TODAY)
+
+    # Tabs: "Breakfast (7am-10:30am)", "Lunch (11am-3pm)", "Dinner (5pm-8pm)".
+    assert lenoir_day(db) == (
+        "open",
+        [
+            ("Breakfast", time(7, 0), time(10, 30)),
+            ("Lunch", time(11, 0), time(15, 0)),
+            ("Dinner", time(17, 0), time(20, 0)),
+        ],
+    )
+
+
+def test_meal_period_hours_are_parsed_from_the_weekend_tabs(db, clean_db):
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+
+    # Real tabs: "Continental  (10am-11am)" (two spaces), "Brunch (11am-3pm)".
+    assert lenoir_day(db) == (
+        "open",
+        [("Continental", time(10, 0), time(11, 0)), ("Brunch", time(11, 0), time(15, 0))],
+    )
+    assert hall_day(db, "chase") == (
+        "open",
+        [
+            ("Continental", time(9, 0), time(11, 0)),
+            ("Brunch", time(11, 0), time(15, 0)),
+            ("Late Lunch", time(15, 0), time(17, 0)),
+            ("Dinner", time(17, 0), time(20, 0)),
+        ],
+    )
+
+
+def test_a_page_with_no_meal_periods_is_saved_as_closed(db, clean_db):
+    scrape(db, with_lenoir("closed-top-of-lenoir.html"), LOCATIONS, today=TODAY)
+
+    assert lenoir_day(db) == ("closed", [])
+    assert hall_day(db, "chase")[0] == "open"
+
+
+def test_a_later_run_the_same_day_updates_open_closed_status(db, clean_db):
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+    scrape(db, with_lenoir("closed-top-of-lenoir.html"), LOCATIONS, today=TODAY)
+
+    assert lenoir_day(db) == ("closed", [])
+    assert lenoir_menu(db) == []
+
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+
+    assert lenoir_day(db)[0] == "open"

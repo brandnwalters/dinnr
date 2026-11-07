@@ -8,6 +8,7 @@ text. Items are `li.menu-item-li` entries holding `<a data-recipe="ID">Name</a>`
 
 import re
 from dataclasses import dataclass, field
+from datetime import time
 
 from bs4 import BeautifulSoup, Tag
 
@@ -33,11 +34,18 @@ class MealPeriod:
     name: str  # without hours, e.g. "Brunch"
     label: str  # the tab text, whitespace-normalized, e.g. "Brunch (11am-3pm)"
     stations: list[Station] = field(default_factory=list)
+    start: time | None = None  # local (America/New_York) wall-clock time; None if unreadable
+    end: time | None = None
 
 
 @dataclass(frozen=True)
 class Menu:
     meal_periods: list[MealPeriod] = field(default_factory=list)
+
+    @property
+    def closed(self) -> bool:
+        """A page with no meal periods means the hall is closed that day."""
+        return not self.meal_periods
 
 
 def _text(tag: Tag) -> str:
@@ -46,6 +54,23 @@ def _text(tag: Tag) -> str:
 
 def _name_from_label(label: str) -> str:
     return re.sub(r"\s*\(.*\)\s*$", "", label).strip()
+
+
+_CLOCK = r"(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?"
+_HOURS = re.compile(rf"\(\s*{_CLOCK}\s*[-–—]\s*{_CLOCK}\s*\)\s*$", re.IGNORECASE)
+
+
+def _clock(hour: str, minute: str | None, meridiem: str) -> time:
+    h = int(hour) % 12 + (12 if meridiem.lower() == "p" else 0)
+    return time(h, int(minute or 0))
+
+
+def _hours_from_label(label: str) -> tuple[time | None, time | None]:
+    """'Brunch (11am-3pm)' -> (11:00, 15:00); (None, None) if the label has no readable hours."""
+    m = _HOURS.search(label)
+    if m is None:
+        return None, None
+    return _clock(*m.group(1, 2, 3)), _clock(*m.group(4, 5, 6))
 
 
 def parse_menu(html: str) -> Menu:
@@ -60,7 +85,8 @@ def parse_menu(html: str) -> Menu:
         if panel is None:
             raise MenuParseError(f"no panel for meal period tab {_text(tab)!r}")
         label = _text(tab)
-        meal_periods.append(MealPeriod(_name_from_label(label), label, _parse_stations(panel)))
+        start, end = _hours_from_label(label)
+        meal_periods.append(MealPeriod(_name_from_label(label), label, _parse_stations(panel), start, end))
     return Menu(meal_periods)
 
 

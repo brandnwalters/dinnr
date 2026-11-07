@@ -8,9 +8,16 @@ import { query } from "@/lib/db";
 
 export type SeedItem = { name: string; recipeId: number };
 export type SeedStation = { name: string; items: SeedItem[] };
-export type SeedMealPeriod = { name: string; stations: SeedStation[] };
+/** `start`/`end` are local wall-clock times ("HH:MM"); omit for a label without hours. */
+export type SeedMealPeriod = { name: string; start?: string; end?: string; stations: SeedStation[] };
 export type SeedLocation = { slug: string; name: string; url?: string };
-export type SeedMenuDay = { location: SeedLocation; date: string; mealPeriods: SeedMealPeriod[] };
+export type SeedMenuDay = {
+  location: SeedLocation;
+  date: string;
+  /** Defaults to "closed" when there are no meal periods, as the scraper saves it. */
+  status?: "open" | "closed";
+  mealPeriods: SeedMealPeriod[];
+};
 
 export type SeedNutrition = {
   recipeId: number;
@@ -64,13 +71,14 @@ export async function seedLocation(location: SeedLocation): Promise<number> {
 export async function seedMenuDay(day: SeedMenuDay): Promise<void> {
   const locationId = await seedLocation(day.location);
   const [menuDay] = await query<{ id: number }>(
-    "insert into menu_day (location_id, date) values ($1, $2) returning id",
-    [locationId, day.date],
+    "insert into menu_day (location_id, date, status) values ($1, $2, $3) returning id",
+    [locationId, day.date, day.status ?? (day.mealPeriods.length === 0 ? "closed" : "open")],
   );
   for (const [mpPosition, mealPeriod] of day.mealPeriods.entries()) {
     const [mp] = await query<{ id: number }>(
-      "insert into meal_period (menu_day_id, name, position) values ($1, $2, $3) returning id",
-      [menuDay.id, mealPeriod.name, mpPosition],
+      `insert into meal_period (menu_day_id, name, position, start_time, end_time)
+       values ($1, $2, $3, $4, $5) returning id`,
+      [menuDay.id, mealPeriod.name, mpPosition, mealPeriod.start ?? null, mealPeriod.end ?? null],
     );
     let position = 0;
     for (const station of mealPeriod.stations) {
