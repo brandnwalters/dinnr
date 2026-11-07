@@ -8,3 +8,6 @@ __pycache__/
 .DS_Store
 .env
 .env.*
+
+# Raw page archive written by dinnr-scrape (uploaded as a CI artifact, never committed)
+archive/
