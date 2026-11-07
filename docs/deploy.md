@@ -7,8 +7,10 @@ GitHub Actions (cron, .github/workflows/scrape.yml)
 
 - **Database**: one Neon Postgres database. The scraper owns the schema: every workflow run applies
   pending migrations before scraping, so a merged migration reaches production on the next run.
-- **Scraper**: `.github/workflows/scrape.yml` runs daily at 09:30 UTC (04:30 EST / 05:30 EDT, before
-  the 7am weekday breakfast; the reasoning is in the workflow file) and on demand from the Actions tab
+- **Scraper**: `.github/workflows/scrape.yml` runs twice daily: at 09:30 UTC (04:30 EST / 05:30 EDT,
+  before the 7am weekday breakfast) and at 17:00 UTC (12:00 EST / 13:00 EDT, to catch changes made
+  during the day, well before 5pm dinner). The reasoning is in the workflow file. The midday run
+  updates the day's menu in place. It also runs on demand from the Actions tab
   (`workflow_dispatch`). It reads one repository secret, `DATABASE_URL`. A failure fails the run, and
   GitHub emails the repo owner.
 - **Web app**: the Vercel project builds `web/`. The build needs no database (the home page renders
@@ -75,3 +77,10 @@ Neon. If the page is empty, check the latest **scrape** run succeeded today.
   hits the live UNC site through the polite fetcher; don't loop it.
 - GitHub disables scheduled workflows after 60 days without repository activity. If the menu stops
   updating, check the Actions tab and re-enable the workflow.
+- **Raw page archive**: every run saves a gzipped copy of each page it fetched, named by location and
+  run time (`archive/<YYYYMMDDTHHMMSSZ>/<location-slug>.html.gz`, nutrition responses as
+  `recipe-<id>.json.gz`), so past days can be re-parsed after a parser bug is fixed. Locally this goes
+  to `scraper/archive/` (gitignored; override with `--archive-dir` or `$DINNR_ARCHIVE_DIR`). In CI the
+  folder is uploaded as the `raw-pages-<run id>-<attempt>` artifact, even when the scrape fails.
+  **GitHub deletes artifacts after 90 days**, so download any you need before then. The planned
+  long-term home is Vercel Blob or a storage bucket (not built yet).
