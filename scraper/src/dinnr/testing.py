@@ -6,6 +6,8 @@ from urllib.parse import urlsplit, urlunsplit
 import psycopg
 from psycopg import sql
 
+from dinnr.nutrition import RECIPE_URL
+
 DEFAULT_TEST_DATABASE_URL = "postgresql://dinnr:dinnr@localhost:5432/dinnr_test"
 
 
@@ -33,20 +35,30 @@ def recreate_database(url: str) -> None:
 # scraper/src/dinnr/testing.py -> repo root
 FIXTURES_DIR = Path(__file__).resolve().parents[3] / "fixtures" / "unc"
 
+DEFAULT_RECIPE_FIXTURE = "recipes/recipe-13708.json"
+RECIPE_URL_PREFIX = RECIPE_URL.split("{")[0]
+
 
 class FakeFetcher:
     """A `Fetcher` that serves saved fixture files and records every URL asked for.
 
-    `pages` maps a URL to a path relative to `fixtures/unc/`. Asking for any
-    other URL raises, so a test can never fall through to the live site.
+    `pages` maps a URL to a path relative to `fixtures/unc/`. A real page lists
+    hundreds of recipes but only a few `recipe.php` responses are saved, so any
+    recipe URL not in `pages` is served `recipe_fallback` (pass None to make
+    those raise too). Asking for any other URL raises, so a test can never fall
+    through to the live site.
     """
 
-    def __init__(self, pages: dict[str, str]):
+    def __init__(self, pages: dict[str, str], *, recipe_fallback: str | None = DEFAULT_RECIPE_FIXTURE):
         self.pages = dict(pages)
+        self.recipe_fallback = recipe_fallback
         self.requested: list[str] = []
 
     def get(self, url: str) -> str:
         self.requested.append(url)
-        if url not in self.pages:
+        path = self.pages.get(url)
+        if path is None and self.recipe_fallback and url.startswith(RECIPE_URL_PREFIX):
+            path = self.recipe_fallback
+        if path is None:
             raise LookupError(f"FakeFetcher has no fixture for {url}")
-        return (FIXTURES_DIR / self.pages[url]).read_text()
+        return (FIXTURES_DIR / path).read_text()

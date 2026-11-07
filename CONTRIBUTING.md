@@ -44,6 +44,11 @@ This fetches the **live** UNC pages (through the polite fetcher: robots.txt chec
 requests) and saves today's menu (America/New_York date) for every hall in
 `scraper/src/dinnr/locations.py`. Re-running the same day updates rows in place.
 
+It also fetches `recipe.php` nutrition for each recipe on the menu that has never been fetched or
+was fetched more than 30 days ago (`recipe_nutrition.fetched_at`). The first run against an empty
+database therefore fetches a few hundred recipes at ~5 s each (tens of minutes); later runs fetch
+only new or stale recipes. A recipe response that can't be parsed is logged and retried next run.
+
 ## Tests
 
 Both suites need the Docker Postgres running. They create and **drop** their own databases, so

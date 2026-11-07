@@ -29,9 +29,10 @@ def main(argv: list[str] | None = None, *, fetcher: Fetcher | None = None, now: 
     )
     args = parser.parse_args(argv)
 
-    today = (now or datetime.now(DINING_TZ)).astimezone(DINING_TZ).date()
+    now = now or datetime.now(DINING_TZ)
+    today = now.astimezone(DINING_TZ).date()
     with psycopg.connect(args.database_url) as conn:
-        scrape(conn, fetcher or PoliteFetcher(), LOCATIONS, today=today)
+        scrape(conn, fetcher or PoliteFetcher(), LOCATIONS, today=today, now=now)
     print(f"dinnr-scrape: saved {len(LOCATIONS)} location(s) for {today}")
     return 0
 
