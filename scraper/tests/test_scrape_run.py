@@ -4,7 +4,7 @@ from datetime import date
 
 from dinnr.locations import LOCATIONS
 from dinnr.run import scrape
-from dinnr.testing import FakeFetcher
+from dinnr.testing import FIXTURES_DIR, FakeFetcher
 
 TODAY = date(2026, 11, 7)  # the day the real fixtures were captured
 LENOIR_URL = "https://dining.unc.edu/locations/top-of-lenoir/"
@@ -52,16 +52,55 @@ def test_a_run_saves_lenoirs_meal_periods_stations_and_items(db, clean_db):
     assert len(brunch_stations) == 17
 
 
-def test_running_twice_on_the_same_day_updates_rows_instead_of_duplicating(db, clean_db):
-    fetcher = FakeFetcher(BOTH_HALLS)
+def all_menu_rows(db):
+    """Every menu row in the database, ids included (menu_day.scraped_at left out: it records the latest run)."""
+    queries = {
+        "location": "select id, slug, name, url from location order by id",
+        "menu_day": "select id, location_id, date from menu_day order by id",
+        "meal_period": "select id, menu_day_id, name, position from meal_period order by id",
+        "station": "select id, name from station order by id",
+        "menu_item": "select id, meal_period_id, station_id, recipe_id, name, position from menu_item order by id",
+    }
+    return {table: db.execute(query).fetchall() for table, query in queries.items()}
 
-    scrape(db, fetcher, LOCATIONS, today=TODAY)
-    first = lenoir_menu(db)
-    scrape(db, fetcher, LOCATIONS, today=TODAY)
 
-    assert lenoir_menu(db) == first
+def test_running_twice_with_the_same_pages_leaves_the_same_rows_as_running_once(db, clean_db):
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+    once = all_menu_rows(db)
+
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+
+    # Same rows with the same ids: updated in place, nothing duplicated or re-created.
+    assert all_menu_rows(db) == once
+    # Fixture README: Lenoir 348 + Chase 888 items.
+    assert len(once["menu_item"]) == 348 + 888
+
+
+def test_a_midday_run_adds_new_items_and_removes_ones_that_are_gone(db, clean_db, tmp_path):
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+    morning = lenoir_menu(db)
+    chase_morning = hall_menu(db, "chase")
+
+    # By midday the Continental Waffle Bar swapped its Waffle for a new dish. Only the first
+    # "Waffle" on the page (Continental) changes; Brunch still serves one.
+    page = (FIXTURES_DIR / "top-of-lenoir.html").read_text()
+    waffle = 'data-recipe="8260" tabindex="0">Waffle</a>'
+    assert page.count(waffle) == 2
+    midday_page = tmp_path / "midday-top-of-lenoir.html"
+    midday_page.write_text(page.replace(waffle, 'data-recipe="99999" tabindex="0">Midday Special</a>', 1))
+    scrape(db, FakeFetcher({**BOTH_HALLS, LENOIR_URL: str(midday_page)}), LOCATIONS, today=TODAY)
+
+    midday = lenoir_menu(db)
+    assert ("Continental", "Waffle Bar", "Midday Special", 99999) in midday
+    assert ("Continental", "Waffle Bar", "Waffle", 8260) not in midday
+    assert ("Brunch", "Waffle Bar", "Waffle", 8260) in midday
+    assert midday == [
+        ("Continental", "Waffle Bar", "Midday Special", 99999) if row == ("Continental", "Waffle Bar", "Waffle", 8260)
+        else row
+        for row in morning
+    ]
+    assert hall_menu(db, "chase") == chase_morning
     assert db.execute("select count(*) from menu_day").fetchone() == (2,)
-    assert db.execute("select count(*) from location").fetchone() == (2,)
 
 
 def test_a_later_run_the_same_day_replaces_a_changed_menu(db, clean_db):
