@@ -1,0 +1,2 @@
+# Saved UNC pages are large single-line-ish HTML; keep them out of diffs.
+fixtures/unc/*.html -diff linguist-vendored
