@@ -6,6 +6,7 @@ import type { TodayMenu } from "@/lib/today";
 import { loadToday } from "./actions";
 import { DietFilters } from "./diet-filters";
 import { HallMenu } from "./hall-menu";
+import styles from "./page.module.css";
 
 /**
  * The home page body. Preferences live on the device, so the menus are loaded
@@ -38,7 +39,12 @@ export function TodayView() {
       {today === null ? (
         <p>Loading today&apos;s menus…</p>
       ) : (
-        today.halls.map((hall) => <HallMenu key={hall.slug} hall={hall} />)
+        // One column per hall on desktop, stacked on narrow screens (page.module.css).
+        <div className={styles.halls}>
+          {today.halls.map((hall) => (
+            <HallMenu key={hall.slug} hall={hall} />
+          ))}
+        </div>
       )}
     </>
   );

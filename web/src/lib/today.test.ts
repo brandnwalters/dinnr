@@ -5,6 +5,7 @@ import { closeDb } from "./db";
 import { getToday } from "./today";
 
 const LENOIR = { slug: "top-of-lenoir", name: "Top of Lenoir" };
+const CHASE = { slug: "chase", name: "Chase" };
 
 // Saturday 2026-11-07, 12:30 in Chapel Hill (EST, UTC-5).
 const SAT_LUNCHTIME = new Date("2026-11-07T17:30:00Z");
@@ -99,4 +100,42 @@ test("a hall with no menu saved for today is listed with no meal periods", async
   const today = await getToday({ now: SAT_LUNCHTIME });
 
   expect(today.halls).toEqual([{ slug: "top-of-lenoir", name: "Top of Lenoir", mealPeriods: [] }]);
+});
+
+test("returns both halls, each with its own menu", async () => {
+  await seedMenuDay({ location: LENOIR, date: "2026-11-07", mealPeriods: [{ name: "Brunch", stations: brunchStations }] });
+  await seedMenuDay({
+    location: CHASE,
+    date: "2026-11-07",
+    mealPeriods: [
+      { name: "Brunch", stations: [{ name: "Waffle Bar", items: [{ name: "Waffle", recipeId: 8260 }] }] },
+      { name: "Late Lunch", stations: [{ name: "Pizza", items: [{ name: "Pepperoni Pizza", recipeId: 7718 }] }] },
+    ],
+  });
+
+  const today = await getToday({ now: SAT_LUNCHTIME });
+
+  expect(today.halls).toMatchObject([
+    { slug: "top-of-lenoir", name: "Top of Lenoir", mealPeriods: [{ name: "Brunch", stations: brunchStations }] },
+    {
+      slug: "chase",
+      name: "Chase",
+      mealPeriods: [
+        { name: "Brunch", stations: [{ name: "Waffle Bar", items: [{ name: "Waffle", recipeId: 8260 }] }] },
+        { name: "Late Lunch", stations: [{ name: "Pizza", items: [{ name: "Pepperoni Pizza", recipeId: 7718 }] }] },
+      ],
+    },
+  ]);
+});
+
+test("a hall with no menu today is still listed next to one that has a menu", async () => {
+  await seedLocation(LENOIR);
+  await seedMenuDay({ location: CHASE, date: "2026-11-07", mealPeriods: [{ name: "Brunch", stations: brunchStations }] });
+
+  const today = await getToday({ now: SAT_LUNCHTIME });
+
+  expect(today.halls).toMatchObject([
+    { slug: "top-of-lenoir", name: "Top of Lenoir", mealPeriods: [] },
+    { slug: "chase", name: "Chase", mealPeriods: [{ name: "Brunch", stations: brunchStations }] },
+  ]);
 });
