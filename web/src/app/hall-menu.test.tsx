@@ -13,9 +13,13 @@ const nutrition = (calories: number | null, proteinG: number | null) => ({
   fatG: 4,
 });
 
+/** A menu item; `normalizedName` defaults from `name`, `favorite` to false. */
+type GrillItem = Omit<MenuItem, "normalizedName" | "favorite"> & Partial<Pick<MenuItem, "normalizedName" | "favorite">>;
+
 /** Lenoir serving Brunch, with these items at The Grill. */
-const renderGrill = (items: MenuItem[]) =>
-  renderToStaticMarkup(
+const renderGrill = (grillItems: GrillItem[], favoriteCount = 0) => {
+  const items = grillItems.map((i) => ({ normalizedName: i.name.toLowerCase(), favorite: false, ...i }));
+  return renderToStaticMarkup(
     <HallMenu
       hall={{
         slug: "top-of-lenoir",
@@ -23,10 +27,12 @@ const renderGrill = (items: MenuItem[]) =>
         status: "serving",
         currentMealPeriod: "Brunch",
         selectedMealPeriod: "Brunch",
+        favoriteCount,
         mealPeriods: [{ name: "Brunch", start: "11:00", end: "15:00", stations: [{ name: "The Grill", items }] }],
       }}
     />,
   );
+};
 
 test("each item shows its calories and protein; items without nutrition still render", () => {
   const html = renderGrill([

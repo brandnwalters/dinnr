@@ -112,7 +112,7 @@ test("a hall with no menu saved for today is listed as 'no-menu' with no meal pe
 
   const today = await getToday({ now: SAT_LUNCHTIME });
 
-  expect(today.halls).toEqual([
+  expect(today.halls).toMatchObject([
     {
       slug: "top-of-lenoir",
       name: "Top of Lenoir",
@@ -184,7 +184,7 @@ test("a hall saved as closed for the day is reported closed", async () => {
 
   const [hall] = (await getToday({ now: mondayAt("12:30") })).halls;
 
-  expect(hall).toEqual({
+  expect(hall).toMatchObject({
     slug: "top-of-lenoir",
     name: "Top of Lenoir",
     status: "closed-today",

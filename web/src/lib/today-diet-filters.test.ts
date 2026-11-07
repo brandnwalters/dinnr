@@ -49,7 +49,7 @@ test("items carry their dietary tags", async () => {
   const today = await getToday({ now: SAT_LUNCHTIME });
 
   const grill = today.halls[0].mealPeriods[0].stations[0];
-  expect(grill.items).toEqual([
+  expect(grill.items).toMatchObject([
     { name: "Nashville Hot Chicken Biscuit", recipeId: 15469, dietaryTags: [] },
     { name: "Black Bean Burger Patty", recipeId: 5810, dietaryTags: ["vegan", "vegetarian", "halal"] },
   ]);
@@ -71,7 +71,7 @@ test("a diet filter hides every item without that tag, and stations left empty",
     preferences: { ...DEFAULT_PREFERENCES, dietFilters: ["vegan"] },
   });
 
-  expect(today.halls[0].mealPeriods[0].stations).toEqual([
+  expect(today.halls[0].mealPeriods[0].stations).toMatchObject([
     {
       name: "The Grill",
       items: [{ name: "Black Bean Burger Patty", recipeId: 5810, dietaryTags: ["vegan", "vegetarian", "halal"] }],

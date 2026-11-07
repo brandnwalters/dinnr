@@ -32,7 +32,7 @@ test("each item carries its recipe's serving size, calories, protein, carbs and 
   await seedNutrition({ recipeId: 13708, servingSize: "4 oz", calories: 140, proteinG: 25, carbsG: 0, fatG: 4 });
   await seedNutrition({ recipeId: 14169, servingSize: "1 pancakes", calories: 80, proteinG: 2, carbsG: 16, fatG: 0.5 });
 
-  expect(await grillItems()).toEqual([
+  expect(await grillItems()).toMatchObject([
     {
       name: "Chicken Breast",
       recipeId: 13708,
@@ -53,7 +53,7 @@ test("an item whose nutrition hasn't been fetched has no nutrition", async () =>
 
   const [item] = await grillItems();
 
-  expect(item).toEqual({ name: "Mystery Special", recipeId: 99999, dietaryTags: [] });
+  expect(item).toMatchObject({ name: "Mystery Special", recipeId: 99999, dietaryTags: [] });
   expect(item.nutrition).toBeUndefined();
 });
 

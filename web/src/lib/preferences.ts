@@ -1,4 +1,5 @@
 import { isDietaryTag, type DietaryTag } from "./dietary-tags";
+import { parseFavorites, type FavoriteDish } from "./favorites";
 
 /**
  * On-device preferences (no accounts): the shape, defaults and validation.
@@ -18,18 +19,22 @@ import { isDietaryTag, type DietaryTag } from "./dietary-tags";
 export type Preferences = {
   /** Strict cutoffs: an item must carry every one of these tags to be shown. */
   dietFilters: DietaryTag[];
+  /** Starred dishes, matched by normalized name at any station or hall (see `favorites.ts`). */
+  favorites: FavoriteDish[];
 };
 
 export const PREFERENCES_VERSION = 1;
 
 export const DEFAULT_PREFERENCES: Preferences = {
   dietFilters: [],
+  favorites: [],
 };
 
 type FieldParsers = { [K in keyof Preferences]: (raw: unknown) => Preferences[K] | undefined };
 
 const FIELD_PARSERS: FieldParsers = {
   dietFilters: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isDietaryTag))] : undefined),
+  favorites: parseFavorites,
 };
 
 /** Upgrades stored data from version `v` to `v + 1`. Keyed by the version it upgrades from. */
