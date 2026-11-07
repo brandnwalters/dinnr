@@ -5,12 +5,16 @@ day updates rows in place. Rows no longer on the page (e.g. a midday menu swap)
 are removed from that day's menu.
 """
 
-from datetime import date
+from collections.abc import Iterable
+from datetime import date, datetime
+from decimal import Decimal
 
 import psycopg
+from psycopg.types.json import Jsonb
 
 from dinnr.locations import Location
 from dinnr.menu_parser import Menu
+from dinnr.nutrition import Nutrition
 
 
 def save_location(conn: psycopg.Connection, location: Location) -> int:
@@ -88,3 +92,52 @@ def save_menu(conn: psycopg.Connection, location: Location, day: date, menu: Men
             (menu_day_id, meal_period_ids),
         )
     return menu_day_id
+
+
+def nutrition_fetched_at(conn: psycopg.Connection, recipe_ids: Iterable[int]) -> dict[int, datetime]:
+    """When each of `recipe_ids` last had its nutrition saved (ids never saved are absent)."""
+    rows = conn.execute(
+        "select recipe_id, fetched_at from recipe_nutrition where recipe_id = any(%s)",
+        (list(recipe_ids),),
+    )
+    return dict(rows.fetchall())
+
+
+def _json_number(amount: Decimal | None) -> int | float | None:
+    if amount is None:
+        return None
+    return int(amount) if amount == amount.to_integral_value() else float(amount)
+
+
+_NUTRITION_COLUMNS = [
+    "name",
+    "serving_size",
+    "calories",
+    "total_fat_g",
+    "saturated_fat_g",
+    "trans_fat_g",
+    "cholesterol_mg",
+    "sodium_mg",
+    "total_carbohydrate_g",
+    "dietary_fiber_g",
+    "sugars_g",
+    "added_sugar_g",
+    "protein_g",
+    "ingredients",
+]
+
+
+def save_nutrition(conn: psycopg.Connection, recipe_id: int, nutrition: Nutrition, fetched_at: datetime) -> None:
+    """Insert or replace one recipe's nutrition."""
+    columns = ["recipe_id", *_NUTRITION_COLUMNS, "micronutrients", "fetched_at"]
+    micronutrients = [
+        {"name": m.name, "amount": _json_number(m.amount), "unit": m.unit} for m in nutrition.micronutrients
+    ]
+    values = [recipe_id, *(getattr(nutrition, c) for c in _NUTRITION_COLUMNS), Jsonb(micronutrients), fetched_at]
+    updates = ", ".join(f"{c} = excluded.{c}" for c in columns[1:])
+    with conn.transaction():
+        conn.execute(
+            f"insert into recipe_nutrition ({', '.join(columns)}) values ({', '.join(['%s'] * len(columns))})"
+            f" on conflict (recipe_id) do update set {updates}",
+            values,
+        )

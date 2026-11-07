@@ -128,12 +128,14 @@ def test_each_day_gets_its_own_menu(db, clean_db):
     assert len(lenoir_menu(db)) == 348
 
 
-def test_a_run_requests_only_the_location_pages(db, clean_db):
+def test_a_run_requests_only_the_location_pages_and_recipe_nutrition(db, clean_db):
     fetcher = FakeFetcher(BOTH_HALLS)
 
     scrape(db, fetcher, LOCATIONS, today=TODAY)
 
-    assert fetcher.requested == [LENOIR_URL, CHASE_URL]
+    recipe_prefix = "https://dining.unc.edu/wp-content/themes/nmc_dining/ajax-content/recipe.php?recipe="
+    assert fetcher.requested[0] == LENOIR_URL
+    assert [url for url in fetcher.requested if not url.startswith(recipe_prefix)] == [LENOIR_URL, CHASE_URL]
 
 
 def test_a_run_with_both_fixtures_saves_lenoir_and_chase(db, clean_db):

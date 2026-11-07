@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None, *, fetcher: Fetcher | None = None, now: 
     today = now.astimezone(DINING_TZ).date()
     archiving = ArchivingFetcher(fetcher or PoliteFetcher(), args.archive_dir, run_at=now, locations=LOCATIONS)
     with psycopg.connect(args.database_url) as conn:
-        scrape(conn, archiving, LOCATIONS, today=today)
+        scrape(conn, archiving, LOCATIONS, today=today, now=now)
     print(f"dinnr-scrape: saved {len(LOCATIONS)} location(s) for {today}")
     return 0
 

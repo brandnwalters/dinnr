@@ -12,6 +12,34 @@ export type SeedMealPeriod = { name: string; stations: SeedStation[] };
 export type SeedLocation = { slug: string; name: string; url?: string };
 export type SeedMenuDay = { location: SeedLocation; date: string; mealPeriods: SeedMealPeriod[] };
 
+export type SeedNutrition = {
+  recipeId: number;
+  servingSize?: string | null;
+  calories?: number | null;
+  proteinG?: number | null;
+  carbsG?: number | null;
+  fatG?: number | null;
+  fetchedAt?: string;
+};
+
+/** Seed one recipe's nutrition (a recipe_nutrition row, as the scraper saves it). */
+export async function seedNutrition(n: SeedNutrition): Promise<void> {
+  await query(
+    `insert into recipe_nutrition
+       (recipe_id, serving_size, calories, protein_g, total_carbohydrate_g, total_fat_g, fetched_at)
+     values ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      n.recipeId,
+      n.servingSize ?? null,
+      n.calories ?? null,
+      n.proteinG ?? null,
+      n.carbsG ?? null,
+      n.fatG ?? null,
+      n.fetchedAt ?? "2026-11-07T14:00:00Z",
+    ],
+  );
+}
+
 /** Empty every app table (all but schema_migrations). */
 export async function resetDb(): Promise<void> {
   const tables = await query<{ tablename: string }>(

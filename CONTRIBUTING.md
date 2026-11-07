@@ -48,6 +48,11 @@ Every fetched page is also saved gzipped to `scraper/archive/<run timestamp>/` (
 with `--archive-dir`). CI keeps these as an artifact for 90 days: see "Raw page archive" in
 [`docs/deploy.md`](docs/deploy.md).
 
+It also fetches `recipe.php` nutrition for each recipe on the menu that has never been fetched or
+was fetched more than 30 days ago (`recipe_nutrition.fetched_at`). The first run against an empty
+database therefore fetches a few hundred recipes at ~5 s each (tens of minutes); later runs fetch
+only new or stale recipes. A recipe response that can't be parsed is logged and retried next run.
+
 ## Tests
 
 Both suites need the Docker Postgres running. They create and **drop** their own databases, so

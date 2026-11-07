@@ -34,7 +34,10 @@ permissions:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A normal run is a few minutes. The first run on an empty database also
+    # fetches nutrition for every recipe on both menus (~320 at ~5 s each, about
+    # 27 min), and so does the day a batch of nutrition turns 30 days old.
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: scraper
