@@ -44,6 +44,10 @@ This fetches the **live** UNC pages (through the polite fetcher: robots.txt chec
 requests) and saves today's menu (America/New_York date) for every hall in
 `scraper/src/dinnr/locations.py`. Re-running the same day updates rows in place.
 
+Every fetched page is also saved gzipped to `scraper/archive/<run timestamp>/` (gitignored; change
+with `--archive-dir`). CI keeps these as an artifact for 90 days: see "Raw page archive" in
+[`docs/deploy.md`](docs/deploy.md).
+
 ## Tests
 
 Both suites need the Docker Postgres running. They create and **drop** their own databases, so
