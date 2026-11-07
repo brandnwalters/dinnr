@@ -16,4 +16,5 @@ class Location:
 
 LOCATIONS: list[Location] = [
     Location("top-of-lenoir", "Top of Lenoir", "https://dining.unc.edu/locations/top-of-lenoir/"),
+    Location("chase", "Chase", "https://dining.unc.edu/locations/chase/"),
 ]

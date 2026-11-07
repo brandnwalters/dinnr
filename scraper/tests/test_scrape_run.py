@@ -8,10 +8,12 @@ from dinnr.testing import FakeFetcher
 
 TODAY = date(2026, 11, 7)  # the day the real fixtures were captured
 LENOIR_URL = "https://dining.unc.edu/locations/top-of-lenoir/"
+CHASE_URL = "https://dining.unc.edu/locations/chase/"
+BOTH_HALLS = {LENOIR_URL: "top-of-lenoir.html", CHASE_URL: "chase.html"}
 
 
-def lenoir_menu(db):
-    """(meal period, station, item name, recipe id) rows for Lenoir on TODAY, in page order."""
+def hall_menu(db, slug):
+    """(meal period, station, item name, recipe id) rows for one hall on TODAY, in page order."""
     return db.execute(
         """
         select mp.name, s.name, mi.name, mi.recipe_id
@@ -20,15 +22,19 @@ def lenoir_menu(db):
         join menu_day md on md.id = mp.menu_day_id
         join location l on l.id = md.location_id
         join station s on s.id = mi.station_id
-        where l.slug = 'top-of-lenoir' and md.date = %s
+        where l.slug = %s and md.date = %s
         order by mp.position, mi.position
         """,
-        (TODAY,),
+        (slug, TODAY),
     ).fetchall()
 
 
+def lenoir_menu(db):
+    return hall_menu(db, "top-of-lenoir")
+
+
 def test_a_run_saves_lenoirs_meal_periods_stations_and_items(db, clean_db):
-    fetcher = FakeFetcher({LENOIR_URL: "top-of-lenoir.html"})
+    fetcher = FakeFetcher(BOTH_HALLS)
 
     scrape(db, fetcher, LOCATIONS, today=TODAY)
 
@@ -47,22 +53,22 @@ def test_a_run_saves_lenoirs_meal_periods_stations_and_items(db, clean_db):
 
 
 def test_running_twice_on_the_same_day_updates_rows_instead_of_duplicating(db, clean_db):
-    fetcher = FakeFetcher({LENOIR_URL: "top-of-lenoir.html"})
+    fetcher = FakeFetcher(BOTH_HALLS)
 
     scrape(db, fetcher, LOCATIONS, today=TODAY)
     first = lenoir_menu(db)
     scrape(db, fetcher, LOCATIONS, today=TODAY)
 
     assert lenoir_menu(db) == first
-    assert db.execute("select count(*) from menu_day").fetchone() == (1,)
-    assert db.execute("select count(*) from location").fetchone() == (1,)
+    assert db.execute("select count(*) from menu_day").fetchone() == (2,)
+    assert db.execute("select count(*) from location").fetchone() == (2,)
 
 
 def test_a_later_run_the_same_day_replaces_a_changed_menu(db, clean_db):
-    scrape(db, FakeFetcher({LENOIR_URL: "top-of-lenoir.html"}), LOCATIONS, today=TODAY)
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
 
     # Midday the page changes: now Breakfast / Lunch / Dinner (weekday fixture).
-    scrape(db, FakeFetcher({LENOIR_URL: "weekday-top-of-lenoir.html"}), LOCATIONS, today=TODAY)
+    scrape(db, FakeFetcher({**BOTH_HALLS, LENOIR_URL: "weekday-top-of-lenoir.html"}), LOCATIONS, today=TODAY)
 
     rows = lenoir_menu(db)
     assert list(dict.fromkeys(r[0] for r in rows)) == ["Breakfast", "Lunch", "Dinner"]
@@ -71,12 +77,12 @@ def test_a_later_run_the_same_day_replaces_a_changed_menu(db, clean_db):
 
 
 def test_each_day_gets_its_own_menu(db, clean_db):
-    fetcher = FakeFetcher({LENOIR_URL: "top-of-lenoir.html"})
+    fetcher = FakeFetcher(BOTH_HALLS)
 
     scrape(db, fetcher, LOCATIONS, today=TODAY)
     scrape(db, fetcher, LOCATIONS, today=date(2026, 11, 8))
 
-    assert db.execute("select date from menu_day order by date").fetchall() == [
+    assert db.execute("select distinct date from menu_day order by date").fetchall() == [
         (date(2026, 11, 7),),
         (date(2026, 11, 8),),
     ]
@@ -84,10 +90,25 @@ def test_each_day_gets_its_own_menu(db, clean_db):
 
 
 def test_a_run_requests_only_the_location_pages_and_recipe_nutrition(db, clean_db):
-    fetcher = FakeFetcher({LENOIR_URL: "top-of-lenoir.html"})
+    fetcher = FakeFetcher(BOTH_HALLS)
 
     scrape(db, fetcher, LOCATIONS, today=TODAY)
 
-    assert fetcher.requested[0] == LENOIR_URL
     recipe_prefix = "https://dining.unc.edu/wp-content/themes/nmc_dining/ajax-content/recipe.php?recipe="
-    assert all(url.startswith(recipe_prefix) for url in fetcher.requested[1:])
+    assert fetcher.requested[0] == LENOIR_URL
+    assert [url for url in fetcher.requested if not url.startswith(recipe_prefix)] == [LENOIR_URL, CHASE_URL]
+
+
+def test_a_run_with_both_fixtures_saves_lenoir_and_chase(db, clean_db):
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+
+    assert db.execute("select slug, name, url from location order by slug").fetchall() == [
+        ("chase", "Chase", CHASE_URL),
+        ("top-of-lenoir", "Top of Lenoir", LENOIR_URL),
+    ]
+    assert len(lenoir_menu(db)) == 348
+    chase = hall_menu(db, "chase")
+    # Fixture README: Chase is Continental / Brunch / Late Lunch / Dinner, 888 items.
+    assert len(chase) == 888
+    assert list(dict.fromkeys(r[0] for r in chase)) == ["Continental", "Brunch", "Late Lunch", "Dinner"]
+    assert chase[0] == ("Continental", "Waffle Bar", "Waffle", 8260)

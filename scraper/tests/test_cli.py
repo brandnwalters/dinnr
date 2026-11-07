@@ -5,6 +5,7 @@ from dinnr.cli import main
 from dinnr.testing import FakeFetcher
 
 LENOIR_URL = "https://dining.unc.edu/locations/top-of-lenoir/"
+CHASE_URL = "https://dining.unc.edu/locations/chase/"
 
 
 def test_dinnr_scrape_is_installed_as_a_command():
@@ -17,10 +18,11 @@ def test_dinnr_scrape_is_installed_as_a_command():
 def test_dinnr_scrape_saves_todays_menu_under_the_new_york_date(clean_db, migrated_database_url):
     # 03:00 UTC on Nov 8 is still the evening of Nov 7 in Chapel Hill.
     now = datetime(2026, 11, 8, 3, 0, tzinfo=UTC)
-    fetcher = FakeFetcher({LENOIR_URL: "top-of-lenoir.html"})
+    fetcher = FakeFetcher({LENOIR_URL: "top-of-lenoir.html", CHASE_URL: "chase.html"})
 
     exit_code = main(["--database-url", migrated_database_url], fetcher=fetcher, now=now)
 
     assert exit_code == 0
-    assert clean_db.execute("select date from menu_day").fetchall() == [(date(2026, 11, 7),)]
-    assert clean_db.execute("select count(*) from menu_item").fetchone() == (348,)
+    assert clean_db.execute("select distinct date from menu_day").fetchall() == [(date(2026, 11, 7),)]
+    # Fixture README: Lenoir 348 + Chase 888 items.
+    assert clean_db.execute("select count(*) from menu_item").fetchone() == (348 + 888,)
