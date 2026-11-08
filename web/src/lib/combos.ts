@@ -22,6 +22,26 @@ export type MacroRange = { min?: number; max?: number };
 /** The user's macro goals. A macro without a range is unconstrained. */
 export type MacroTargets = Partial<Record<Macro, MacroRange>>;
 
+/**
+ * Untrusted stored/sent targets -> valid ones: unknown macros and bounds that
+ * aren't non-negative finite numbers are dropped; a macro left with no bound is
+ * dropped too. A min above its max is kept (nothing will fit, which the UI says).
+ */
+export function parseMacroTargets(raw: unknown): MacroTargets | undefined {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
+  const bound = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : undefined);
+  const out: MacroTargets = {};
+  for (const m of MACROS) {
+    const range = (raw as Record<string, unknown>)[m];
+    if (typeof range !== "object" || range === null) continue;
+    const min = bound((range as MacroRange).min);
+    const max = bound((range as MacroRange).max);
+    if (min === undefined && max === undefined) continue;
+    out[m] = { ...(min !== undefined && { min }), ...(max !== undefined && { max }) };
+  }
+  return out;
+}
+
 /** One menu item the engine may use: macros are per serving and all known. */
 export type ComboItem = { id: number; name: string; station: string; macros: Macros };
 
