@@ -1,3 +1,4 @@
+import { isAllergen, type Allergen } from "./allergens";
 import { query } from "./db";
 import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
 
@@ -36,7 +37,9 @@ export type ItemNutrition = {
 };
 /**
  * `dietaryTags` and `allergens` are UNC codes (see `dietary-tags.ts`,
- * `allergens.ts`), in page order.
+ * `allergens.ts`), in page order. `dietaryTags` keeps codes UNC adds later
+ * (shown with a humanized label), so it may hold more than `DietaryTag`;
+ * `allergens` holds only the known `Allergen` codes the user can filter on.
  * `nutrition` is absent when the recipe's nutrition hasn't been fetched yet.
  */
 export type MenuItem = {
@@ -47,7 +50,7 @@ export type MenuItem = {
   /** Whether `normalizedName` is one of the user's favorites. */
   favorite: boolean;
   dietaryTags: string[];
-  allergens: string[];
+  allergens: Allergen[];
   nutrition?: ItemNutrition;
 };
 /**
@@ -68,6 +71,9 @@ export type MealPeriod = {
   favorites: FavoriteServing[];
   stations: Station[];
 };
+
+/** `menu_day.status`: whether UNC's page listed meal periods that day. */
+type MenuStatus = "open" | "closed";
 
 /**
  * - `serving`: `currentMealPeriod` is being served now.
@@ -122,7 +128,7 @@ export function diningTime(now: Date): string {
 
 /** The hall's status and current (or next) meal period at local time `time` ("HH:MM"). */
 function currentMeal(
-  menuStatus: string | null,
+  menuStatus: MenuStatus | null,
   mealPeriods: MealPeriod[],
   time: string,
 ): { status: HallStatus; current: string | null } {
@@ -144,13 +150,13 @@ type Row = {
   location_id: number;
   slug: string;
   location_name: string;
-  menu_status: string | null;
+  menu_status: MenuStatus | null;
   meal_period_id: number | null;
   meal_period_name: string | null;
   start_time: string | null;
   end_time: string | null;
   station_name: string | null;
-  station_excluded: boolean | null;
+  station_excluded_from_combos: boolean | null;
   item_name: string | null;
   recipe_id: number | null;
   normalized_name: string | null;
@@ -164,7 +170,7 @@ type Row = {
   fat_g: number | null;
 };
 
-type HallRows = { slug: string; name: string; menuStatus: string | null; mealPeriods: MealPeriod[] };
+type HallRows = { slug: string; name: string; menuStatus: MenuStatus | null; mealPeriods: MealPeriod[] };
 
 export async function getToday({
   now,
@@ -175,7 +181,7 @@ export async function getToday({
   const rows = await query<Row>(
     `select l.id as location_id, l.slug, l.name as location_name, md.status as menu_status,
             mp.id as meal_period_id, mp.name as meal_period_name, mp.start_time, mp.end_time,
-            s.name as station_name, s.excluded_from_combos as station_excluded, mi.name as item_name, mi.recipe_id,
+            s.name as station_name, s.excluded_from_combos as station_excluded_from_combos, mi.name as item_name, mi.recipe_id,
             mi.normalized_name, mi.dietary_tags, mi.allergens,
             rn.recipe_id is not null as has_nutrition, rn.serving_size,
             rn.calories::float8 as calories, rn.protein_g::float8 as protein_g,
@@ -221,7 +227,7 @@ export async function getToday({
     let station = mealPeriod.stations.at(-1);
     if (station?.name !== row.station_name) {
       station = { name: row.station_name!, items: [] };
-      if (row.station_excluded) station.excludedFromCombos = true;
+      if (row.station_excluded_from_combos) station.excludedFromCombos = true;
       mealPeriod.stations.push(station);
     }
     const item: MenuItem = {
@@ -230,7 +236,7 @@ export async function getToday({
       normalizedName: row.normalized_name!,
       favorite: favoriteNames.has(row.normalized_name!),
       dietaryTags: row.dietary_tags!,
-      allergens: row.allergens!,
+      allergens: row.allergens!.filter(isAllergen),
     };
     if (row.has_nutrition) {
       item.nutrition = {
