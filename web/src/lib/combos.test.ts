@@ -148,7 +148,7 @@ test("mixed targets: a protein minimum with a calorie maximum", () => {
 const peanutButter = (): ComboItem => ({
   ...item("Peanut Butter", 190, 10),
   station: "Condiments and Spreads",
-  excluded: true,
+  excludedFromCombos: true,
 });
 
 test("items from stations flagged as excluded (condiments, beverages, ...) are left out by default", () => {

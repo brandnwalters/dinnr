@@ -7,7 +7,7 @@
  * returned. Ranking (see `RANKING`): fewest distinct items first, then ones
  * containing a favorite, then the smallest distance from the targets, then
  * menu order. At most `MAX_COMBOS`. Items hidden by the user's diet/allergen
- * filters never appear, and items from condiment-type stations (`excluded`)
+ * filters never appear, and items from condiment-type stations (`excludedFromCombos`)
  * are left out unless `includeExcludedStations` is on.
  *
  * Pure and isomorphic: the combos UI runs it in the browser on the items
@@ -47,7 +47,7 @@ export function parseMacroTargets(raw: unknown): MacroTargets | undefined {
 
 /**
  * One menu item the engine may use: macros are per serving and all known.
- * `excluded`: it's only served at stations flagged as not part of combos
+ * `excludedFromCombos`: it's only served at stations flagged as not part of combos
  * (condiments, beverages, cereal, ...; flagged by the scraper).
  */
 export type ComboItem = {
@@ -55,7 +55,7 @@ export type ComboItem = {
   name: string;
   station: string;
   macros: Macros;
-  excluded?: boolean;
+  excludedFromCombos?: boolean;
   /** One of the user's favorite dishes: combos containing one rank higher. */
   favorite?: boolean;
   /** UNC dietary tag codes, checked against `ComboInput.dietFilters` (missing = none). */
@@ -65,7 +65,7 @@ export type ComboItem = {
 };
 
 /**
- * `includeExcludedStations` (default off) lets `excluded` items into combos.
+ * `includeExcludedStations` (default off) lets `excludedFromCombos` items into combos.
  * `dietFilters` / `allergens` are the user's filters: an item must carry every
  * diet tag and none of the allergens, exactly like the Today menu's filters.
  */
@@ -82,7 +82,7 @@ function allowed(
   item: ComboItem,
   { includeExcludedStations = false, dietFilters = [], allergens = [] }: Omit<ComboInput, "items" | "targets">,
 ): boolean {
-  if (item.excluded && !includeExcludedStations) return false;
+  if (item.excludedFromCombos && !includeExcludedStations) return false;
   const tags = item.dietaryTags ?? [];
   if (!dietFilters.every((t) => tags.includes(t))) return false;
   const has = item.allergens ?? [];
@@ -318,7 +318,7 @@ const maxOf = (items: ComboItem[], k: number) => Math.max(1e-9, ...items.map((it
 /**
  * The items of one meal period the engine can use: those whose recipe
  * nutrition gives all four macros. Repeats of a recipe (two stations) count
- * once, and are `excluded` only if every station serving them is flagged.
+ * once, and are `excludedFromCombos` only if every station serving them is flagged.
  * Each item keeps its diet tags, allergens and `favorite` flag for the engine.
  */
 export function comboItemsFrom(mealPeriod: MealPeriod): ComboItem[] {
@@ -330,8 +330,8 @@ export function comboItemsFrom(mealPeriod: MealPeriod): ComboItem[] {
       if (!nu || nu.calories == null || nu.proteinG == null || nu.carbsG == null || nu.fatG == null) continue;
       const earlier = seen.get(it.recipeId);
       if (earlier) {
-        if (earlier.excluded && !station.excludedFromCombos) {
-          delete earlier.excluded;
+        if (earlier.excludedFromCombos && !station.excludedFromCombos) {
+          delete earlier.excludedFromCombos;
           earlier.station = station.name;
         }
         continue;
@@ -345,7 +345,7 @@ export function comboItemsFrom(mealPeriod: MealPeriod): ComboItem[] {
         allergens: it.allergens,
       };
       if (it.favorite) item.favorite = true;
-      if (station.excludedFromCombos) item.excluded = true;
+      if (station.excludedFromCombos) item.excludedFromCombos = true;
       seen.set(it.recipeId, item);
       out.push(item);
     }
