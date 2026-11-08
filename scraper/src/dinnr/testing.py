@@ -46,16 +46,26 @@ class FakeFetcher:
     hundreds of recipes but only a few `recipe.php` responses are saved, so any
     recipe URL not in `pages` is served `recipe_fallback` (pass None to make
     those raise too). Asking for any other URL raises, so a test can never fall
-    through to the live site.
+    through to the live site. `failures` maps a URL to the exception asking for
+    it raises (e.g. a `FetchError` for an HTTP 503 or a timeout).
     """
 
-    def __init__(self, pages: dict[str, str], *, recipe_fallback: str | None = DEFAULT_RECIPE_FIXTURE):
+    def __init__(
+        self,
+        pages: dict[str, str],
+        *,
+        recipe_fallback: str | None = DEFAULT_RECIPE_FIXTURE,
+        failures: dict[str, Exception] | None = None,
+    ):
         self.pages = dict(pages)
         self.recipe_fallback = recipe_fallback
+        self.failures = dict(failures or {})
         self.requested: list[str] = []
 
     def get(self, url: str) -> str:
         self.requested.append(url)
+        if url in self.failures:
+            raise self.failures[url]
         path = self.pages.get(url)
         if path is None and self.recipe_fallback and url.startswith(RECIPE_URL_PREFIX):
             path = self.recipe_fallback
