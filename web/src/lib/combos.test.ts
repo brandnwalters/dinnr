@@ -174,6 +174,21 @@ test("items from excluded stations are included when the toggle is on", () => {
   ]);
 });
 
+test("when every item is from an excluded station, the message says so and points to the toggle", () => {
+  const { combos, message } = suggestCombos({ items: [peanutButter()], targets: { proteinG: { min: 10 } } });
+
+  expect(combos).toEqual([]);
+  expect(message).toMatch(/condiment, beverage and cereal stations/);
+  expect(message).toMatch(/Include condiments, beverages and cereal/);
+  expect(message).not.toMatch(/nutrition info/);
+});
+
+test("with no items at all, the message says there's no nutrition info", () => {
+  const { message } = suggestCombos({ items: [], targets: { proteinG: { min: 10 } } });
+
+  expect(message).toBe("No items with nutrition info in this meal yet, so no combos.");
+});
+
 test("items hidden by the diet filters never appear in combos", () => {
   // Without filters the steak would lead (right on the 30 g aim); the vegan filter hides it and the eggs.
   const steak: ComboItem = { ...item("Steak", 300, 30), dietaryTags: [] };

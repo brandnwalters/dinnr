@@ -169,7 +169,14 @@ export function suggestCombos({ items: allItems, targets, ...filters }: ComboInp
   const activeIdx = MACROS.map((_, k) => k).filter((k) => aims[k] !== null);
   if (activeIdx.length === 0) return { combos: [], message: "Set at least one target to see combos." };
   if (items.length === 0) {
-    return { combos: [], message: "No items with nutrition info in this meal yet, so no combos." };
+    const onlyExcluded = allItems.some((it) => allowed(it, { ...filters, includeExcludedStations: true }));
+    return {
+      combos: [],
+      message: onlyExcluded
+        ? "This meal's items are all from condiment, beverage and cereal stations, which combos leave out. " +
+          'Turn on "Include condiments, beverages and cereal" to use them.'
+        : "No items with nutrition info in this meal yet, so no combos.",
+    };
   }
 
   const n = items.length;
