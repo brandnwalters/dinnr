@@ -34,7 +34,8 @@ export type ItemNutrition = {
   fatG: number | null;
 };
 /**
- * `dietaryTags` are UNC codes (see `dietary-tags.ts`), in page order.
+ * `dietaryTags` and `allergens` are UNC codes (see `dietary-tags.ts`,
+ * `allergens.ts`), in page order.
  * `nutrition` is absent when the recipe's nutrition hasn't been fetched yet.
  */
 export type MenuItem = {
@@ -45,6 +46,7 @@ export type MenuItem = {
   /** Whether `normalizedName` is one of the user's favorites. */
   favorite: boolean;
   dietaryTags: string[];
+  allergens: string[];
   nutrition?: ItemNutrition;
 };
 /**
@@ -141,6 +143,7 @@ type Row = {
   recipe_id: number | null;
   normalized_name: string | null;
   dietary_tags: string[] | null;
+  allergens: string[] | null;
   has_nutrition: boolean;
   serving_size: string | null;
   calories: number | null;
@@ -161,7 +164,7 @@ export async function getToday({
     `select l.id as location_id, l.slug, l.name as location_name, md.status as menu_status,
             mp.id as meal_period_id, mp.name as meal_period_name, mp.start_time, mp.end_time,
             s.name as station_name, s.excluded_from_combos as station_excluded, mi.name as item_name, mi.recipe_id,
-            mi.normalized_name, mi.dietary_tags,
+            mi.normalized_name, mi.dietary_tags, mi.allergens,
             rn.recipe_id is not null as has_nutrition, rn.serving_size,
             rn.calories::float8 as calories, rn.protein_g::float8 as protein_g,
             rn.total_carbohydrate_g::float8 as carbs_g, rn.total_fat_g::float8 as fat_g
@@ -214,6 +217,7 @@ export async function getToday({
       normalizedName: row.normalized_name!,
       favorite: favoriteNames.has(row.normalized_name!),
       dietaryTags: row.dietary_tags!,
+      allergens: row.allergens!,
     };
     if (row.has_nutrition) {
       item.nutrition = {

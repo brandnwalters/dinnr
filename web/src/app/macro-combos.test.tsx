@@ -1,6 +1,7 @@
 // UI smoke tests: the macro targets form, and combos for each hall with totals next to the targets.
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
+import type { Allergen } from "@/lib/allergens";
 import type { MacroTargets } from "@/lib/combos";
 import type { Hall, MenuItem } from "@/lib/today";
 import { MacroCombos } from "./macro-combos";
@@ -10,6 +11,7 @@ const food = (name: string, recipeId: number, calories: number, proteinG: number
   normalizedName: name.toLowerCase(),
   recipeId,
   dietaryTags: [],
+  allergens: [],
   favorite: false,
   nutrition: { servingSize: "1 each", calories, proteinG, carbsG: 10, fatG: 5 },
 });
@@ -35,9 +37,11 @@ const hall = (slug: string, name: string, items: MenuItem[]): Hall => ({
   ],
 });
 
-const render = (targets: MacroTargets, includeExcludedStations = false) =>
+const render = (targets: MacroTargets, includeExcludedStations = false, allergens: Allergen[] = []) =>
   renderToStaticMarkup(
     <MacroCombos
+      dietFilters={[]}
+      allergens={allergens}
       halls={[
         hall("top-of-lenoir", "Top of Lenoir", [food("Grilled Chicken", 1, 140, 25), food("Rice", 2, 200, 4)]),
         hall("chase", "Chase", [food("Salmon", 3, 300, 34)]),
@@ -85,4 +89,11 @@ test("condiment-type stations stay out of combos until the toggle is on", () => 
   expect(off).not.toContain("Peanut Butter");
   expect(toggle(on)).toContain("checked");
   expect(on).toContain("1× Peanut Butter");
+});
+
+test("the allergen disclaimer shows on the combos view only when an allergen filter is on", () => {
+  const disclaimer = /Allergen filters are not a guarantee/;
+
+  expect(render({ proteinG: { min: 30 } }, false, ["milk"])).toMatch(disclaimer);
+  expect(render({ proteinG: { min: 30 } })).not.toMatch(disclaimer);
 });

@@ -13,12 +13,13 @@ const nutrition = (calories: number | null, proteinG: number | null) => ({
   fatG: 4,
 });
 
-/** A menu item; `normalizedName` defaults from `name`, `favorite` to false. */
-type GrillItem = Omit<MenuItem, "normalizedName" | "favorite"> & Partial<Pick<MenuItem, "normalizedName" | "favorite">>;
+/** A menu item; `normalizedName` defaults from `name`, `favorite` to false, `allergens` to none. */
+type GrillItem = Omit<MenuItem, "normalizedName" | "favorite" | "allergens"> &
+  Partial<Pick<MenuItem, "normalizedName" | "favorite" | "allergens">>;
 
 /** Lenoir serving Brunch, with these items at The Grill. */
 const renderGrill = (grillItems: GrillItem[], favoriteCount = 0) => {
-  const items = grillItems.map((i) => ({ normalizedName: i.name.toLowerCase(), favorite: false, ...i }));
+  const items = grillItems.map((i) => ({ normalizedName: i.name.toLowerCase(), favorite: false, allergens: [], ...i }));
   return renderToStaticMarkup(
     <HallMenu
       hall={{
