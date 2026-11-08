@@ -9,6 +9,7 @@ import { AllergenDisclaimer } from "./allergen-disclaimer";
 import { AllergenFilters } from "./allergen-filters";
 import { DietFilters } from "./diet-filters";
 import { HallMenu } from "./hall-menu";
+import { MacroCombos } from "./macro-combos";
 import styles from "./page.module.css";
 
 /**
@@ -50,11 +51,18 @@ export function TodayView() {
         <p>Loading today&apos;s menus…</p>
       ) : (
         // One column per hall on desktop, stacked on narrow screens (page.module.css).
-        <div className={styles.halls}>
-          {today.halls.map((hall) => (
-            <HallMenu key={hall.slug} hall={hall} />
-          ))}
-        </div>
+        <>
+          <div className={styles.halls}>
+            {today.halls.map((hall) => (
+              <HallMenu key={hall.slug} hall={hall} />
+            ))}
+          </div>
+          <MacroCombos
+            halls={today.halls}
+            targets={preferences.macroTargets}
+            onTargetsChange={(macroTargets) => updatePreferences((p) => ({ ...p, macroTargets }))}
+          />
+        </>
       )}
     </>
   );

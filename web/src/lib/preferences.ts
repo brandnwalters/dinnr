@@ -1,5 +1,6 @@
 import { isAllergen, type Allergen } from "./allergens";
 import { isDietaryTag, type DietaryTag } from "./dietary-tags";
+import { parseMacroTargets, type MacroTargets } from "./combos";
 
 /**
  * On-device preferences (no accounts): the shape, defaults and validation.
@@ -21,6 +22,8 @@ export type Preferences = {
   dietFilters: DietaryTag[];
   /** Strict cutoffs: an item carrying any of these allergens is hidden. */
   allergens: Allergen[];
+  /** Macro combos: optional min/max per macro for one meal. */
+  macroTargets: MacroTargets;
 };
 
 export const PREFERENCES_VERSION = 1;
@@ -28,6 +31,7 @@ export const PREFERENCES_VERSION = 1;
 export const DEFAULT_PREFERENCES: Preferences = {
   dietFilters: [],
   allergens: [],
+  macroTargets: {},
 };
 
 type FieldParsers = { [K in keyof Preferences]: (raw: unknown) => Preferences[K] | undefined };
@@ -35,6 +39,7 @@ type FieldParsers = { [K in keyof Preferences]: (raw: unknown) => Preferences[K]
 const FIELD_PARSERS: FieldParsers = {
   dietFilters: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isDietaryTag))] : undefined),
   allergens: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isAllergen))] : undefined),
+  macroTargets: parseMacroTargets,
 };
 
 /** Upgrades stored data from version `v` to `v + 1`. Keyed by the version it upgrades from. */
