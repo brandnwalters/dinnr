@@ -1,21 +1,8 @@
 // Favorites in on-device preferences: starred, unstarred and kept across reloads.
 import { expect, test } from "vitest";
 import { removeFavorite, toggleFavorite } from "./favorites";
+import { memoryStorage } from "../../test/memory-storage";
 import { createPreferencesStore, PREFERENCES_STORAGE_KEY } from "./preferences-store";
-
-function memoryStorage(initial: Record<string, string> = {}): Storage {
-  const data = new Map(Object.entries(initial));
-  return {
-    get length() {
-      return data.size;
-    },
-    clear: () => data.clear(),
-    getItem: (k) => data.get(k) ?? null,
-    key: (i) => [...data.keys()][i] ?? null,
-    removeItem: (k) => void data.delete(k),
-    setItem: (k, v) => void data.set(k, String(v)),
-  };
-}
 
 const chicken = { normalizedName: "grilled chicken breast", name: "Grilled Chicken Breast" };
 const waffle = { normalizedName: "waffle", name: "Waffle" };
