@@ -61,6 +61,10 @@ export function TodayView() {
             halls={today.halls}
             targets={preferences.macroTargets}
             onTargetsChange={(macroTargets) => updatePreferences((p) => ({ ...p, macroTargets }))}
+            includeExcludedStations={preferences.includeExcludedStations}
+            onIncludeExcludedStationsChange={(includeExcludedStations) =>
+              updatePreferences((p) => ({ ...p, includeExcludedStations }))
+            }
           />
         </>
       )}

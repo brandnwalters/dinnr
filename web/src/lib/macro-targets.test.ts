@@ -72,3 +72,13 @@ test("a stored minimum above its maximum is kept as entered (the combos just won
     proteinG: { min: 60, max: 40 },
   });
 });
+
+test("condiment-type stations are left out of combos by default, and turning them on survives a reload", () => {
+  const storage = memoryStorage();
+  expect(createPreferencesStore(storage).get().includeExcludedStations).toBe(false);
+
+  createPreferencesStore(storage).update((p) => ({ ...p, includeExcludedStations: true }));
+
+  expect(createPreferencesStore(storage).get().includeExcludedStations).toBe(true);
+  expect(parsePreferences({ includeExcludedStations: "yes" }).includeExcludedStations).toBe(false);
+});

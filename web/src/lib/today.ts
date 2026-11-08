@@ -38,7 +38,11 @@ export type ItemNutrition = {
  * `nutrition` is absent when the recipe's nutrition hasn't been fetched yet.
  */
 export type MenuItem = { name: string; recipeId: number; dietaryTags: string[]; nutrition?: ItemNutrition };
-export type Station = { name: string; items: MenuItem[] };
+/**
+ * `excludedFromCombos` is present (true) only for stations the scraper flagged
+ * as not part of meal combos (condiments, beverages, cereal, ...).
+ */
+export type Station = { name: string; excludedFromCombos?: true; items: MenuItem[] };
 /** `start`/`end` are local wall-clock times "HH:MM", or null if UNC's label had no readable hours. */
 export type MealPeriod = { name: string; start: string | null; end: string | null; stations: Station[] };
 
@@ -121,6 +125,7 @@ type Row = {
   start_time: string | null;
   end_time: string | null;
   station_name: string | null;
+  station_excluded: boolean | null;
   item_name: string | null;
   recipe_id: number | null;
   dietary_tags: string[] | null;
@@ -143,7 +148,7 @@ export async function getToday({
   const rows = await query<Row>(
     `select l.id as location_id, l.slug, l.name as location_name, md.status as menu_status,
             mp.id as meal_period_id, mp.name as meal_period_name, mp.start_time, mp.end_time,
-            s.name as station_name, mi.name as item_name, mi.recipe_id, mi.dietary_tags,
+            s.name as station_name, s.excluded_from_combos as station_excluded, mi.name as item_name, mi.recipe_id, mi.dietary_tags,
             rn.recipe_id is not null as has_nutrition, rn.serving_size,
             rn.calories::float8 as calories, rn.protein_g::float8 as protein_g,
             rn.total_carbohydrate_g::float8 as carbs_g, rn.total_fat_g::float8 as fat_g
@@ -186,6 +191,7 @@ export async function getToday({
     let station = mealPeriod.stations.at(-1);
     if (station?.name !== row.station_name) {
       station = { name: row.station_name!, items: [] };
+      if (row.station_excluded) station.excludedFromCombos = true;
       mealPeriod.stations.push(station);
     }
     const item: MenuItem = { name: row.item_name, recipeId: row.recipe_id!, dietaryTags: row.dietary_tags! };

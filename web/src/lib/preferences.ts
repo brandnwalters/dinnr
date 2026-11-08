@@ -24,6 +24,8 @@ export type Preferences = {
   allergens: Allergen[];
   /** Macro combos: optional min/max per macro for one meal. */
   macroTargets: MacroTargets;
+  /** Macro combos: let items from condiment-type stations (flagged by the scraper) into combos. */
+  includeExcludedStations: boolean;
 };
 
 export const PREFERENCES_VERSION = 1;
@@ -32,6 +34,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   dietFilters: [],
   allergens: [],
   macroTargets: {},
+  includeExcludedStations: false,
 };
 
 type FieldParsers = { [K in keyof Preferences]: (raw: unknown) => Preferences[K] | undefined };
@@ -40,6 +43,7 @@ const FIELD_PARSERS: FieldParsers = {
   dietFilters: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isDietaryTag))] : undefined),
   allergens: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isAllergen))] : undefined),
   macroTargets: parseMacroTargets,
+  includeExcludedStations: (raw) => (typeof raw === "boolean" ? raw : undefined),
 };
 
 /** Upgrades stored data from version `v` to `v + 1`. Keyed by the version it upgrades from. */

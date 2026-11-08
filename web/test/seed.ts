@@ -7,7 +7,8 @@ import { query } from "@/lib/db";
  */
 
 export type SeedItem = { name: string; recipeId: number; dietaryTags?: string[]; allergens?: string[] };
-export type SeedStation = { name: string; items: SeedItem[] };
+/** `excludedFromCombos`: the scraper's name-based flag (condiments, beverages, ...); default false. */
+export type SeedStation = { name: string; excludedFromCombos?: boolean; items: SeedItem[] };
 /** `start`/`end` are local wall-clock times ("HH:MM"); omit for a label without hours. */
 export type SeedMealPeriod = { name: string; start?: string; end?: string; stations: SeedStation[] };
 export type SeedLocation = { slug: string; name: string; url?: string };
@@ -106,9 +107,9 @@ export async function seedMenuDay(day: SeedMenuDay): Promise<void> {
     let position = 0;
     for (const station of mealPeriod.stations) {
       const [st] = await query<{ id: number }>(
-        `insert into station (name) values ($1)
-         on conflict (name) do update set name = excluded.name returning id`,
-        [station.name],
+        `insert into station (name, excluded_from_combos) values ($1, $2)
+         on conflict (name) do update set excluded_from_combos = excluded.excluded_from_combos returning id`,
+        [station.name, station.excludedFromCombos ?? false],
       );
       for (const item of station.items) {
         await query(

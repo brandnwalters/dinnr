@@ -80,12 +80,21 @@ function ComboTotals({ combo, targets }: { combo: Combo; targets: MacroTargets }
 }
 
 /** One hall's top combos from its selected meal period. */
-function HallCombos({ hall, targets }: { hall: Hall; targets: MacroTargets }) {
+function HallCombos({
+  hall,
+  targets,
+  includeExcludedStations,
+}: {
+  hall: Hall;
+  targets: MacroTargets;
+  includeExcludedStations: boolean;
+}) {
   const mealPeriod = hall.mealPeriods.find((mp) => mp.name === hall.selectedMealPeriod);
   // Pure and fast (< 1 s worst case for a real menu), so it runs here on every targets/menu change.
   const result = useMemo(
-    () => (mealPeriod ? suggestCombos({ items: comboItemsFrom(mealPeriod), targets }) : null),
-    [mealPeriod, targets],
+    () =>
+      mealPeriod ? suggestCombos({ items: comboItemsFrom(mealPeriod), targets, includeExcludedStations }) : null,
+    [mealPeriod, targets, includeExcludedStations],
   );
   return (
     <section aria-labelledby={`combos-${hall.slug}`}>
@@ -111,23 +120,44 @@ function HallCombos({ hall, targets }: { hall: Hall; targets: MacroTargets }) {
   );
 }
 
-/** Macro combos: the targets form and, for each hall, combos that meet the targets. */
+/**
+ * Macro combos: the targets form, the condiment-type stations toggle and, for
+ * each hall, combos that meet the targets.
+ */
 export function MacroCombos({
   halls,
   targets,
   onTargetsChange,
+  includeExcludedStations,
+  onIncludeExcludedStationsChange,
 }: {
   halls: Hall[];
   targets: MacroTargets;
   onTargetsChange: (targets: MacroTargets) => void;
+  includeExcludedStations: boolean;
+  onIncludeExcludedStationsChange: (include: boolean) => void;
 }) {
   const anyTarget = Object.keys(targets).length > 0;
   return (
     <section aria-labelledby="macro-combos">
       <h2 id="macro-combos">Macro combos</h2>
       <TargetsForm targets={targets} onChange={onTargetsChange} />
+      <label>
+        <input
+          type="checkbox"
+          name="includeExcludedStations"
+          checked={includeExcludedStations}
+          onChange={(e) => onIncludeExcludedStationsChange(e.target.checked)}
+        />{" "}
+        Include condiments, beverages and cereal
+      </label>
       {anyTarget ? (
-        halls.map((hall) => <HallCombos key={hall.slug} hall={hall} targets={targets} />)
+        halls.map((hall) => <HallCombos
+            key={hall.slug}
+            hall={hall}
+            targets={targets}
+            includeExcludedStations={includeExcludedStations}
+          />)
       ) : (
         <p>Set at least one target to see combos of up to 3 items from each hall.</p>
       )}
