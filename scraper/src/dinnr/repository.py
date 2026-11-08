@@ -169,11 +169,11 @@ def menu_day_item_count(conn: psycopg.Connection, menu_day_id: int) -> int:
     ).fetchone()[0]
 
 
-def open_day_item_counts(conn: psycopg.Connection, location: Location, start: date, end: date) -> list[int]:
-    """Saved item counts of the location's open days with start <= date < end."""
+def open_day_item_counts(conn: psycopg.Connection, location: Location, start: date, end: date) -> dict[date, int]:
+    """Saved item counts of the location's open days with start <= date < end, by date."""
     rows = conn.execute(
         """
-        select count(mi.id)
+        select md.date, count(mi.id)
         from menu_day md
         join location l on l.id = md.location_id
         left join meal_period mp on mp.menu_day_id = md.id
@@ -183,7 +183,7 @@ def open_day_item_counts(conn: psycopg.Connection, location: Location, start: da
         """,
         (location.slug, start, end),
     )
-    return [row[0] for row in rows.fetchall()]
+    return dict(rows.fetchall())
 
 
 def nutrition_fetched_at(conn: psycopg.Connection, recipe_ids: Iterable[int]) -> dict[int, datetime]:

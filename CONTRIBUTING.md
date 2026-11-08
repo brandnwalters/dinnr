@@ -60,7 +60,8 @@ keeps every hall and recipe saved before that point.
 Health checks (`scraper/src/dinnr/health.py`): the run exits 1, printing one `<hall>: <reason>` line per
 failing hall to stderr, when a hall's page can't be fetched or isn't in the expected shape (nothing is saved for it), when
 a hall that isn't closed has no items, or when its item count is under half its recent normal (median
-of its open days in the previous 14 days). Every other hall is still scraped and saved. A location page
+of its comparable open days in the previous 14 days: weekends are compared with weekends and weekdays
+with weekdays, since weekend menus are much smaller; skipped with no comparable history). Every other hall is still scraped and saved. A location page
 with no meal period tabs is a closed day and never fails.
 
 ## Tests

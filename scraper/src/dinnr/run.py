@@ -71,7 +71,7 @@ def scrape(
         update_nutrition(conn, fetcher, menu, now=now)
         recent = open_day_item_counts(conn, location, today - timedelta(days=RECENT_DAYS), today)
         item_count = menu_day_item_count(conn, menu_day_id)
-        problems += [f"{location.name}: {p}" for p in menu_problems(menu, item_count, recent)]
+        problems += [f"{location.name}: {p}" for p in menu_problems(menu, item_count, today, recent)]
     if problems:
         raise ScrapeFailed(problems)
 

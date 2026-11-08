@@ -43,23 +43,33 @@ def page_file(tmp_path, name, html):
     return str(path)
 
 
-def scrape_lenoir(db, tmp_path, html):
-    """Scrape only Lenoir, serving it `html`."""
+def scrape_lenoir(db, tmp_path, html, *, today=TODAY):
+    """Scrape only Lenoir on `today` (a Saturday by default), serving it `html`."""
     fetcher = FakeFetcher({LENOIR_URL: page_file(tmp_path, "lenoir.html", html)})
-    scrape(db, fetcher, [LENOIR], today=TODAY, now=NOW)
+    scrape(db, fetcher, [LENOIR], today=today, now=NOW)
 
 
-def seed_open_days(db, item_counts):
-    """Lenoir open on the days before TODAY (most recent last), with these item counts."""
+# TODAY is Saturday 2026-11-07.
+WEEKDAYS_BEFORE = [TODAY - timedelta(days=n) for n in (5, 4, 3, 2, 1)]  # Mon 2 .. Fri 6 Nov
+WEEKENDS_BEFORE = [TODAY - timedelta(days=n) for n in (14, 13, 7, 6)]  # Sat 24 Oct .. Sun 1 Nov
+NEXT_MONDAY = TODAY + timedelta(days=2)
+
+
+def days(dates, counts):
+    return dict(zip(dates, counts, strict=True))
+
+
+def seed_open_days(db, counts_by_date):
+    """Lenoir open on these past days ({date: item count})."""
     location_id = db.execute(
         "insert into location (slug, name, url) values (%s, %s, %s) returning id",
         (LENOIR.slug, LENOIR.name, LENOIR.url),
     ).fetchone()[0]
     station_id = db.execute("insert into station (name) values ('Seeded') returning id").fetchone()[0]
-    for days_ago, count in zip(range(len(item_counts), 0, -1), item_counts, strict=True):
+    for day, count in counts_by_date.items():
         menu_day_id = db.execute(
             "insert into menu_day (location_id, date, status) values (%s, %s, 'open') returning id",
-            (location_id, TODAY - timedelta(days=days_ago)),
+            (location_id, day),
         ).fetchone()[0]
         meal_period_id = db.execute(
             "insert into meal_period (menu_day_id, name, position) values (%s, 'Lunch', 0) returning id",
@@ -82,9 +92,11 @@ def test_an_open_day_with_no_items_fails_the_run(db, clean_db, tmp_path):
 
 
 def test_an_item_count_under_half_of_recent_normal_fails_the_run(db, clean_db, tmp_path):
-    seed_open_days(db, [20, 22, 21])
+    seed_open_days(db, days(WEEKENDS_BEFORE[1:], [20, 22, 21]))
 
-    with pytest.raises(ScrapeFailed, match=r"Top of Lenoir: 10 menu items, under half of the recent normal \(21\)"):
+    with pytest.raises(
+        ScrapeFailed, match=r"Top of Lenoir: 10 menu items, under half of the recent weekend normal \(21\)"
+    ):
         scrape_lenoir(db, tmp_path, menu_page(10))
 
     # What was there is still saved.
@@ -92,12 +104,40 @@ def test_an_item_count_under_half_of_recent_normal_fails_the_run(db, clean_db, t
 
 
 def test_an_item_count_of_at_least_half_of_recent_normal_does_not_fail(db, clean_db, tmp_path):
-    # A quieter day (e.g. a weekend menu after weekdays) is fewer items, not a collapse.
-    seed_open_days(db, [20, 22, 21, 20, 22])
+    seed_open_days(db, days(WEEKENDS_BEFORE, [20, 22, 21, 22]))
 
     scrape_lenoir(db, tmp_path, menu_page(11))
 
     assert len(hall_menu(db, "top-of-lenoir")) == 11
+
+
+def test_a_weekend_menu_is_compared_with_recent_weekends_not_weekdays(db, clean_db, tmp_path):
+    # Weekend Continental/Brunch menus are much smaller than weekday Breakfast/Lunch/Dinner.
+    seed_open_days(db, {**days(WEEKENDS_BEFORE, [14, 15, 16, 15]), **days(WEEKDAYS_BEFORE, [40, 42, 41, 40, 42])})
+
+    scrape_lenoir(db, tmp_path, menu_page(12))
+
+    assert len(hall_menu(db, "top-of-lenoir")) == 12
+
+
+def test_a_weekday_menu_is_compared_with_recent_weekdays_not_weekends(db, clean_db, tmp_path):
+    # Mixed with the four small weekend days, the median would be 15.5 and 14 items would pass.
+    weekends = [TODAY - timedelta(days=7), TODAY - timedelta(days=6), TODAY, TODAY + timedelta(days=1)]
+    seed_open_days(db, {**days(weekends, [14, 15, 16, 15]), **days(WEEKDAYS_BEFORE[3:], [40, 42])})
+
+    with pytest.raises(
+        ScrapeFailed, match=r"Top of Lenoir: 14 menu items, under half of the recent weekday normal \(41\)"
+    ):
+        scrape_lenoir(db, tmp_path, menu_page(14), today=NEXT_MONDAY)
+
+
+def test_a_first_weekend_after_only_weekdays_is_not_compared(db, clean_db, tmp_path):
+    # No weekend in the last two weeks to compare with, so only the "no items" check applies.
+    seed_open_days(db, days(WEEKDAYS_BEFORE, [40, 42, 41, 40, 42]))
+
+    scrape_lenoir(db, tmp_path, menu_page(12))
+
+    assert len(hall_menu(db, "top-of-lenoir")) == 12
 
 
 def test_a_closed_day_does_not_fail_the_run(db, clean_db):
@@ -108,7 +148,7 @@ def test_a_closed_day_does_not_fail_the_run(db, clean_db):
 
 
 def test_a_closed_day_after_normal_days_does_not_fail_the_run(db, clean_db, tmp_path):
-    seed_open_days(db, [20, 22, 21])
+    seed_open_days(db, days(WEEKENDS_BEFORE[1:], [20, 22, 21]))
 
     scrape_lenoir(db, tmp_path, location_page())
 
