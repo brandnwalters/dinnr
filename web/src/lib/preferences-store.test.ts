@@ -78,3 +78,21 @@ test("a device where storage throws (private mode, quota) still works for the se
 
   expect(store.get().dietFilters).toEqual(["vegan"]);
 });
+
+test("allergen choices survive a reload, and unknown codes are dropped", () => {
+  const storage = memoryStorage();
+  createPreferencesStore(storage).update((p) => ({ ...p, allergens: ["peanut", "tree_nuts"] }));
+
+  expect(createPreferencesStore(storage).get().allergens).toEqual(["peanut", "tree_nuts"]);
+
+  const tampered = memoryStorage({
+    [PREFERENCES_STORAGE_KEY]: JSON.stringify({ version: 1, allergens: ["milk", "has_egg", 3, "milk"] }),
+  });
+  expect(createPreferencesStore(tampered).get().allergens).toEqual(["milk"]);
+});
+
+test("preferences stored before allergens existed keep their diet filters and get no allergens", () => {
+  const old = memoryStorage({ [PREFERENCES_STORAGE_KEY]: JSON.stringify({ version: 1, dietFilters: ["halal"] }) });
+
+  expect(createPreferencesStore(old).get()).toMatchObject({ dietFilters: ["halal"], allergens: [] });
+});
