@@ -6,6 +6,8 @@
  * `MAX_SERVINGS` whole servings. Only combos that meet every target are
  * returned. Ranking (see `RANKING`): fewest distinct items first, then the
  * smallest distance from the targets, then menu order. At most `MAX_COMBOS`.
+ * Items from condiment-type stations (`excluded`) are left out unless
+ * `includeExcludedStations` is on.
  *
  * Pure and isomorphic: the combos UI runs it in the browser on the items
  * `getToday` already returned (so diet/allergen filters applied there carry
@@ -42,10 +44,15 @@ export function parseMacroTargets(raw: unknown): MacroTargets | undefined {
   return out;
 }
 
-/** One menu item the engine may use: macros are per serving and all known. */
-export type ComboItem = { id: number; name: string; station: string; macros: Macros };
+/**
+ * One menu item the engine may use: macros are per serving and all known.
+ * `excluded`: it's only served at stations flagged as not part of combos
+ * (condiments, beverages, cereal, ...; flagged by the scraper).
+ */
+export type ComboItem = { id: number; name: string; station: string; macros: Macros; excluded?: boolean };
 
-export type ComboInput = { items: ComboItem[]; targets: MacroTargets };
+/** `includeExcludedStations` (default off) lets `excluded` items into combos. */
+export type ComboInput = { items: ComboItem[]; targets: MacroTargets; includeExcludedStations?: boolean };
 
 export type Combo = {
   items: { item: ComboItem; servings: number }[];
@@ -117,7 +124,12 @@ function aimPoint({ min, max }: MacroRange): number | null {
   return min ?? max ?? null;
 }
 
-export function suggestCombos({ items, targets }: ComboInput): ComboSuggestions {
+export function suggestCombos({
+  items: allItems,
+  targets,
+  includeExcludedStations = false,
+}: ComboInput): ComboSuggestions {
+  const items = includeExcludedStations ? allItems : allItems.filter((it) => !it.excluded);
   const aims = MACROS.map((m) => aimPoint(targets[m] ?? {}));
   const activeIdx = MACROS.map((_, k) => k).filter((k) => aims[k] !== null);
   if (activeIdx.length === 0) return { combos: [], message: "Set at least one target to see combos." };
@@ -256,23 +268,33 @@ const maxOf = (items: ComboItem[], k: number) => Math.max(1e-9, ...items.map((it
 
 /**
  * The items of one meal period the engine can use: those whose recipe
- * nutrition gives all four macros. Repeats of a recipe (two stations) count once.
+ * nutrition gives all four macros. Repeats of a recipe (two stations) count
+ * once, and are `excluded` only if every station serving them is flagged.
  */
 export function comboItemsFrom(mealPeriod: MealPeriod): ComboItem[] {
-  const seen = new Set<number>();
+  const seen = new Map<number, ComboItem>();
   const out: ComboItem[] = [];
   for (const station of mealPeriod.stations) {
     for (const it of station.items) {
       const nu = it.nutrition;
       if (!nu || nu.calories == null || nu.proteinG == null || nu.carbsG == null || nu.fatG == null) continue;
-      if (seen.has(it.recipeId)) continue;
-      seen.add(it.recipeId);
-      out.push({
+      const earlier = seen.get(it.recipeId);
+      if (earlier) {
+        if (earlier.excluded && !station.excludedFromCombos) {
+          delete earlier.excluded;
+          earlier.station = station.name;
+        }
+        continue;
+      }
+      const item: ComboItem = {
         id: it.recipeId,
         name: it.name,
         station: station.name,
         macros: { calories: nu.calories, proteinG: nu.proteinG, carbsG: nu.carbsG, fatG: nu.fatG },
-      });
+      };
+      if (station.excludedFromCombos) item.excluded = true;
+      seen.set(it.recipeId, item);
+      out.push(item);
     }
   }
   return out;

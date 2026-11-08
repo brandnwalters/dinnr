@@ -15,6 +15,7 @@ from psycopg.types.json import Jsonb
 from dinnr.locations import Location
 from dinnr.menu_parser import Menu
 from dinnr.nutrition import Nutrition
+from dinnr.stations import excluded_from_combos
 
 
 def save_location(conn: psycopg.Connection, location: Location) -> int:
@@ -31,11 +32,11 @@ def save_location(conn: psycopg.Connection, location: Location) -> int:
 def save_station(conn: psycopg.Connection, name: str) -> int:
     return conn.execute(
         """
-        insert into station (name) values (%s)
-        on conflict (name) do update set name = excluded.name
+        insert into station (name, excluded_from_combos) values (%s, %s)
+        on conflict (name) do update set excluded_from_combos = excluded.excluded_from_combos
         returning id
         """,
-        (name,),
+        (name, excluded_from_combos(name)),
     ).fetchone()[0]
 
 

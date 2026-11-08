@@ -58,7 +58,7 @@ def all_menu_rows(db):
         "location": "select id, slug, name, url from location order by id",
         "menu_day": "select id, location_id, date, status from menu_day order by id",
         "meal_period": "select id, menu_day_id, name, position, start_time, end_time from meal_period order by id",
-        "station": "select id, name from station order by id",
+        "station": "select id, name, excluded_from_combos from station order by id",
         "menu_item": (
             "select id, meal_period_id, station_id, recipe_id, name, position, dietary_tags from menu_item order by id"
         ),

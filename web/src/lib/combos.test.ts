@@ -142,3 +142,33 @@ test("mixed targets: a protein minimum with a calorie maximum", () => {
     expect(totals.calories).toBeLessThanOrEqual(400);
   }
 });
+
+/** Peanut butter from a flagged station, which alone would meet a 10 g protein minimum best. */
+const peanutButter = (): ComboItem => ({
+  ...item("Peanut Butter", 190, 10),
+  station: "Condiments and Spreads",
+  excluded: true,
+});
+
+test("items from stations flagged as excluded (condiments, beverages, ...) are left out by default", () => {
+  const items = [peanutButter(), item("Chicken Breast", 140, 25)];
+
+  const { combos } = suggestCombos({ items, targets: { proteinG: { min: 10 } } });
+
+  expect(described(combos)).toEqual(["1x Chicken Breast", "2x Chicken Breast"]);
+});
+
+test("items from excluded stations are included when the toggle is on", () => {
+  const items = [peanutButter(), item("Chicken Breast", 140, 25)];
+
+  const { combos } = suggestCombos({ items, targets: { proteinG: { min: 10 } }, includeExcludedStations: true });
+
+  // 10 g aim: peanut butter is right on it (2x is 10 g over), chicken 15 g over.
+  expect(described(combos)).toEqual([
+    "1x Peanut Butter",
+    "2x Peanut Butter",
+    "1x Chicken Breast",
+    "2x Chicken Breast",
+    "1x Peanut Butter + 1x Chicken Breast",
+  ]);
+});

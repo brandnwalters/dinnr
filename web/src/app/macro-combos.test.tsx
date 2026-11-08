@@ -23,11 +23,19 @@ const hall = (slug: string, name: string, items: MenuItem[]): Hall => ({
   favoriteCount: 0,
   mealPeriods: [
     { name: "Lunch", start: "11:00", end: "14:00", stations: [{ name: "Grill", items: [food("Lunch Only Wrap", 9, 400, 60)] }] },
-    { name: "Dinner", start: "17:00", end: "20:00", stations: [{ name: "Grill", items }] },
+    {
+      name: "Dinner",
+      start: "17:00",
+      end: "20:00",
+      stations: [
+        { name: "Grill", items },
+        { name: "Condiments and Spreads", excludedFromCombos: true, items: [food("Peanut Butter", 8, 190, 8)] },
+      ],
+    },
   ],
 });
 
-const render = (targets: MacroTargets) =>
+const render = (targets: MacroTargets, includeExcludedStations = false) =>
   renderToStaticMarkup(
     <MacroCombos
       halls={[
@@ -36,6 +44,8 @@ const render = (targets: MacroTargets) =>
       ]}
       targets={targets}
       onTargetsChange={() => {}}
+      includeExcludedStations={includeExcludedStations}
+      onIncludeExcludedStationsChange={() => {}}
     />,
   );
 
@@ -63,4 +73,16 @@ test("each hall gets combos from its selected meal, with totals next to the targ
 test("a hall where nothing fits says so, and with no targets the form asks for one", () => {
   expect(render({ proteinG: { min: 100 } })).toMatch(/No combination of up to 3 items meets all your targets/);
   expect(render({})).toContain("Set at least one target");
+});
+
+test("condiment-type stations stay out of combos until the toggle is on", () => {
+  const toggle = (html: string) => html.match(/<input[^>]*name="includeExcludedStations"[^>]*>/)?.[0];
+  const off = render({ proteinG: { min: 8, max: 9 } });
+  const on = render({ proteinG: { min: 8, max: 9 } }, true);
+
+  expect(toggle(off)).toContain('type="checkbox"');
+  expect(toggle(off)).not.toContain("checked");
+  expect(off).not.toContain("Peanut Butter");
+  expect(toggle(on)).toContain("checked");
+  expect(on).toContain("1× Peanut Butter");
 });

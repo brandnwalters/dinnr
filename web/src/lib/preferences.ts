@@ -27,6 +27,8 @@ export type Preferences = {
   macroTargets: MacroTargets;
   /** Starred dishes, matched by normalized name at any station or hall (see `favorites.ts`). */
   favorites: FavoriteDish[];
+  /** Macro combos: let items from condiment-type stations (flagged by the scraper) into combos. */
+  includeExcludedStations: boolean;
 };
 
 export const PREFERENCES_VERSION = 1;
@@ -36,6 +38,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   allergens: [],
   macroTargets: {},
   favorites: [],
+  includeExcludedStations: false,
 };
 
 type FieldParsers = { [K in keyof Preferences]: (raw: unknown) => Preferences[K] | undefined };
@@ -45,6 +48,7 @@ const FIELD_PARSERS: FieldParsers = {
   allergens: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isAllergen))] : undefined),
   macroTargets: parseMacroTargets,
   favorites: parseFavorites,
+  includeExcludedStations: (raw) => (typeof raw === "boolean" ? raw : undefined),
 };
 
 /** Upgrades stored data from version `v` to `v + 1`. Keyed by the version it upgrades from. */
