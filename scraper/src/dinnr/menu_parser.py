@@ -5,6 +5,9 @@ Page structure (see fixtures/unc/README.md): meal periods are the tabs of
 `.menu-station` blocks, whose name is the `button.toggle-menu-station-data`
 text. Items are `li.menu-item-li` entries holding `<a data-recipe="ID">Name</a>`; dietary tags
 are the link's `prop-<code>` classes and allergens its `allergen-has_<code>` classes.
+
+A location page (it has `#single-location-wrap`) with no `#menu-tabs` is a
+closed day. Anything else that isn't in this shape raises `MenuParseError`.
 """
 
 import re
@@ -16,6 +19,10 @@ from bs4 import BeautifulSoup, Tag
 
 class MenuParseError(ValueError):
     """The page doesn't have the structure we expect."""
+
+
+# Wraps the location header, filters and menu on every location page, closed or not.
+LOCATION_PAGE_ID = "single-location-wrap"
 
 
 @dataclass(frozen=True)
@@ -86,6 +93,8 @@ def _allergens(link: Tag) -> tuple[str, ...]:
 
 def parse_menu(html: str) -> Menu:
     soup = BeautifulSoup(html, "html.parser")
+    if soup.find(id=LOCATION_PAGE_ID) is None:
+        raise MenuParseError(f"not a location page (no #{LOCATION_PAGE_ID})")
     tabs_root = soup.find(id="menu-tabs")
     if tabs_root is None:
         return Menu()

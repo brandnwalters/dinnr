@@ -2,7 +2,8 @@
 
 Scrapes every configured location's page for today (America/New_York) into
 Postgres, through the polite fetcher. Every fetched page is also saved gzipped
-under the archive folder (see `dinnr.archive`).
+under the archive folder (see `dinnr.archive`). Exits 1, naming each failing
+hall and why, if any hall's page fails a health check (see `dinnr.health`).
 """
 
 import argparse
@@ -18,7 +19,7 @@ from dinnr.archive import ArchivingFetcher
 from dinnr.fetcher import Fetcher, PoliteFetcher
 from dinnr.locations import LOCATIONS
 from dinnr.migrate import DEFAULT_DATABASE_URL
-from dinnr.run import scrape
+from dinnr.run import ScrapeFailed, scrape
 
 DINING_TZ = ZoneInfo("America/New_York")
 
@@ -42,7 +43,11 @@ def main(argv: list[str] | None = None, *, fetcher: Fetcher | None = None, now: 
     today = now.astimezone(DINING_TZ).date()
     archiving = ArchivingFetcher(fetcher or PoliteFetcher(), args.archive_dir, run_at=now, locations=LOCATIONS)
     with psycopg.connect(args.database_url) as conn:
-        scrape(conn, archiving, LOCATIONS, today=today, now=now)
+        try:
+            scrape(conn, archiving, LOCATIONS, today=today, now=now)
+        except ScrapeFailed as e:
+            print(f"dinnr-scrape: {e}", file=sys.stderr)
+            return 1
     print(f"dinnr-scrape: saved {len(LOCATIONS)} location(s) for {today}")
     return 0
 

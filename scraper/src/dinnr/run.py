@@ -1,23 +1,39 @@
 """Run orchestration: one scrape of every configured location.
 
 Per location: fetch the page -> parse -> save the menu -> fetch and save
-nutrition for recipes that are new or stale. Later steps (health checks, raw
-archive) slot in here as further per-location steps.
+nutrition for recipes that are new or stale -> health checks. A hall that
+fails a check doesn't stop the others: every hall is scraped, then the run
+raises `ScrapeFailed` listing each failing hall and why.
 """
 
 import logging
 from collections.abc import Iterable
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import psycopg
 
 from dinnr.fetcher import Fetcher
+from dinnr.health import RECENT_DAYS, menu_problems
 from dinnr.locations import Location
-from dinnr.menu_parser import Menu, parse_menu
+from dinnr.menu_parser import Menu, MenuParseError, parse_menu
 from dinnr.nutrition import NutritionParseError, needs_fetch, parse_nutrition, recipe_url
-from dinnr.repository import nutrition_fetched_at, save_menu, save_nutrition
+from dinnr.repository import (
+    menu_day_item_count,
+    nutrition_fetched_at,
+    open_day_item_counts,
+    save_menu,
+    save_nutrition,
+)
 
 log = logging.getLogger(__name__)
+
+
+class ScrapeFailed(Exception):
+    """One or more halls failed. `problems` holds one "<hall>: <reason>" line per failure."""
+
+    def __init__(self, problems: list[str]):
+        self.problems = problems
+        super().__init__("scrape failed:\n" + "\n".join(f"  {p}" for p in problems))
 
 
 def scrape(
@@ -29,11 +45,21 @@ def scrape(
     now: datetime | None = None,
 ) -> None:
     now = now or datetime.now(UTC)
+    problems = []
     for location in locations:
         html = fetcher.get(location.url)
-        menu = parse_menu(html)
-        save_menu(conn, location, today, menu)
+        try:
+            menu = parse_menu(html)
+        except MenuParseError as e:
+            problems.append(f"{location.name}: unexpected page structure ({e}); nothing saved")
+            continue
+        menu_day_id = save_menu(conn, location, today, menu)
         update_nutrition(conn, fetcher, menu, now=now)
+        recent = open_day_item_counts(conn, location, today - timedelta(days=RECENT_DAYS), today)
+        item_count = menu_day_item_count(conn, menu_day_id)
+        problems += [f"{location.name}: {p}" for p in menu_problems(menu, item_count, recent)]
+    if problems:
+        raise ScrapeFailed(problems)
 
 
 def update_nutrition(conn: psycopg.Connection, fetcher: Fetcher, menu: Menu, *, now: datetime) -> None:

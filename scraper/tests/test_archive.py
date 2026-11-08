@@ -3,10 +3,7 @@
 import gzip
 from datetime import UTC, datetime
 
-import pytest
-
 from dinnr.cli import main
-from dinnr.menu_parser import MenuParseError
 from dinnr.testing import FIXTURES_DIR, FakeFetcher
 
 LENOIR_URL = "https://dining.unc.edu/locations/top-of-lenoir/"
@@ -38,19 +35,13 @@ def test_a_run_saves_each_hall_page_gzipped_under_the_run_timestamp(clean_db, mi
     assert lenoir == (FIXTURES_DIR / "top-of-lenoir.html").read_text()
 
 
-class StringFetcher:
-    def __init__(self, pages):
-        self.pages = pages
-
-    def get(self, url):
-        return self.pages[url]
-
-
 def test_a_page_the_parser_rejects_is_still_archived(clean_db, migrated_database_url, tmp_path):
     broken = '<div id="menu-tabs"><button role="tab" aria-controls="missing">Lunch (11am-2pm)</button></div>'
-    fetcher = StringFetcher({LENOIR_URL: broken, CHASE_URL: (FIXTURES_DIR / "chase.html").read_text()})
+    broken_page = tmp_path / "broken.html"
+    broken_page.write_text(broken)
+    archive_dir = tmp_path / "archive"
+    fetcher = FakeFetcher({LENOIR_URL: str(broken_page), CHASE_URL: "chase.html"})
 
-    with pytest.raises(MenuParseError):
-        run(migrated_database_url, tmp_path, fetcher)
+    assert run(migrated_database_url, archive_dir, fetcher) == 1
 
-    assert gzip.decompress((tmp_path / RUN / "top-of-lenoir.html.gz").read_bytes()).decode() == broken
+    assert gzip.decompress((archive_dir / RUN / "top-of-lenoir.html.gz").read_bytes()).decode() == broken
