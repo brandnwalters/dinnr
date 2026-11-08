@@ -3,14 +3,15 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ALLERGENS } from "@/lib/allergens";
+import { DIETARY_TAGS } from "@/lib/dietary-tags";
 import { toggleFavorite } from "@/lib/favorites";
 import { todayQueryPreferences } from "@/lib/preferences";
 import { usePreferences } from "@/lib/preferences-store";
 import type { TodayMenu } from "@/lib/today";
 import { loadToday } from "./actions";
 import { AllergenDisclaimer } from "./allergen-disclaimer";
-import { AllergenFilters } from "./allergen-filters";
-import { DietFilters } from "./diet-filters";
+import { CheckboxFilters } from "./checkbox-filters";
 import { HallMenu } from "./hall-menu";
 import { MacroCombos } from "./macro-combos";
 import styles from "./page.module.css";
@@ -47,11 +48,18 @@ export function TodayView() {
       <p>
         <Link href="/favorites">My favorites ({preferences.favorites.length})</Link>
       </p>
-      <DietFilters
+      {/* Strict cutoffs: an item must carry every checked diet tag, and none of the checked allergens. */}
+      <CheckboxFilters
+        legend="Only show items that are"
+        name="diet"
+        options={DIETARY_TAGS}
         selected={preferences.dietFilters}
         onChange={(dietFilters) => updatePreferences((p) => ({ ...p, dietFilters }))}
       />
-      <AllergenFilters
+      <CheckboxFilters
+        legend="Hide items containing"
+        name="allergen"
+        options={ALLERGENS}
         selected={preferences.allergens}
         onChange={(allergens) => updatePreferences((p) => ({ ...p, allergens }))}
       />
