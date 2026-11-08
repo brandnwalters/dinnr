@@ -12,12 +12,26 @@ test("each menu item is a button that opens its nutrition and ingredients", () =
         status: "serving",
         currentMealPeriod: "Brunch",
         selectedMealPeriod: "Brunch",
+        favoriteCount: 0,
         mealPeriods: [
           {
             name: "Brunch",
             start: "11:00",
             end: "15:00",
-            stations: [{ name: "The Grill", items: [{ name: "Chicken Breast", recipeId: 13708, dietaryTags: [] }] }],
+            stations: [
+              {
+                name: "The Grill",
+                items: [
+                  {
+                    name: "Chicken Breast",
+                    recipeId: 13708,
+                    normalizedName: "chicken breast",
+                    favorite: false,
+                    dietaryTags: [],
+                  },
+                ],
+              },
+            ],
           },
         ],
       }}

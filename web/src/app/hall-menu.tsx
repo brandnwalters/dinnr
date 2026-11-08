@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DietaryTagBadges } from "./dietary-tag-badges";
+import { FavoriteButton, FavoriteCount } from "./favorite-button";
 import { NutritionButton } from "./nutrition-panel";
 import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
 
@@ -42,12 +43,20 @@ function statusText(hall: Hall): string {
 }
 
 /** One hall's status, a switcher for today's meal periods, and the selected meal's menu. */
-export function HallMenu({ hall }: { hall: Hall }) {
+export function HallMenu({
+  hall,
+  onToggleFavorite,
+}: {
+  hall: Hall;
+  /** Star / unstar a dish (by its normalized name). */
+  onToggleFavorite?: (item: MenuItem) => void;
+}) {
   const selected = hall.mealPeriods.find((mp) => mp.name === hall.selectedMealPeriod);
   return (
     <section aria-labelledby={`hall-${hall.slug}`}>
       <h2 id={`hall-${hall.slug}`}>{hall.name}</h2>
       <p data-status={hall.status}>{statusText(hall)}</p>
+      <FavoriteCount count={hall.favoriteCount} />
 
       {hall.mealPeriods.length > 0 && (
         <nav aria-label={`${hall.name} meal periods`}>
@@ -79,7 +88,12 @@ export function HallMenu({ hall }: { hall: Hall }) {
               <h4>{station.name}</h4>
               <ul>
                 {station.items.map((item) => (
-                  <li key={item.recipeId} data-recipe={item.recipeId}>
+                  <li
+                    key={item.recipeId}
+                    data-recipe={item.recipeId}
+                    data-favorite={item.favorite ? "true" : undefined}
+                  >
+                    <FavoriteButton item={item} onToggle={onToggleFavorite} />{" "}
                     <NutritionButton recipeId={item.recipeId} name={item.name} />
                     <DietaryTagBadges tags={item.dietaryTags} />
                     <MacroSummary item={item} />

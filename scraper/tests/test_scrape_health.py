@@ -67,8 +67,8 @@ def seed_open_days(db, item_counts):
         ).fetchone()[0]
         db.execute(
             """
-            insert into menu_item (meal_period_id, station_id, recipe_id, name, position)
-            select %s, %s, n, 'Seeded ' || n, n from generate_series(1, %s) n
+            insert into menu_item (meal_period_id, station_id, recipe_id, name, position, normalized_name)
+            select %s, %s, n, 'Seeded ' || n, n, 'seeded ' || n from generate_series(1, %s) n
             """,
             (meal_period_id, station_id, count),
         )

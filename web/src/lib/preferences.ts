@@ -1,6 +1,7 @@
 import { isAllergen, type Allergen } from "./allergens";
 import { isDietaryTag, type DietaryTag } from "./dietary-tags";
 import { parseMacroTargets, type MacroTargets } from "./combos";
+import { parseFavorites, type FavoriteDish } from "./favorites";
 
 /**
  * On-device preferences (no accounts): the shape, defaults and validation.
@@ -24,6 +25,8 @@ export type Preferences = {
   allergens: Allergen[];
   /** Macro combos: optional min/max per macro for one meal. */
   macroTargets: MacroTargets;
+  /** Starred dishes, matched by normalized name at any station or hall (see `favorites.ts`). */
+  favorites: FavoriteDish[];
 };
 
 export const PREFERENCES_VERSION = 1;
@@ -32,6 +35,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   dietFilters: [],
   allergens: [],
   macroTargets: {},
+  favorites: [],
 };
 
 type FieldParsers = { [K in keyof Preferences]: (raw: unknown) => Preferences[K] | undefined };
@@ -40,6 +44,7 @@ const FIELD_PARSERS: FieldParsers = {
   dietFilters: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isDietaryTag))] : undefined),
   allergens: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isAllergen))] : undefined),
   macroTargets: parseMacroTargets,
+  favorites: parseFavorites,
 };
 
 /** Upgrades stored data from version `v` to `v + 1`. Keyed by the version it upgrades from. */

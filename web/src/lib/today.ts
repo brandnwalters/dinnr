@@ -14,9 +14,9 @@ import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
  * filter what's returned. Both filters are strict cutoffs: an item missing any
  * filtered diet tag, or carrying any chosen allergen, is left out, as is a
  * station left with no items. Allergen filtering relies on UNC's labels only:
- * the UI must show `AllergenDisclaimer` alongside it.
- *
- * Later slices extend this: more preferences (favorites first).
+ * the UI must show `AllergenDisclaimer` alongside it. Favorites (matched by
+ * normalized name) are flagged, come first (stations serving one lead the
+ * meal, favorites lead their station) and are counted per hall.
  */
 
 export const DINING_TIME_ZONE = "America/New_York";
@@ -37,7 +37,16 @@ export type ItemNutrition = {
  * `dietaryTags` are UNC codes (see `dietary-tags.ts`), in page order.
  * `nutrition` is absent when the recipe's nutrition hasn't been fetched yet.
  */
-export type MenuItem = { name: string; recipeId: number; dietaryTags: string[]; nutrition?: ItemNutrition };
+export type MenuItem = {
+  name: string;
+  recipeId: number;
+  /** How favorites match the dish across stations and halls (`favorites.ts`). */
+  normalizedName: string;
+  /** Whether `normalizedName` is one of the user's favorites. */
+  favorite: boolean;
+  dietaryTags: string[];
+  nutrition?: ItemNutrition;
+};
 export type Station = { name: string; items: MenuItem[] };
 /** `start`/`end` are local wall-clock times "HH:MM", or null if UNC's label had no readable hours. */
 export type MealPeriod = { name: string; start: string | null; end: string | null; stations: Station[] };
@@ -59,6 +68,8 @@ export type Hall = {
   currentMealPeriod: string | null;
   /** The meal to show: the requested one if this hall serves it today, else `currentMealPeriod`. */
   selectedMealPeriod: string | null;
+  /** Distinct favorites (by normalized name) shown in the selected meal period, after filters. */
+  favoriteCount: number;
   mealPeriods: MealPeriod[];
 };
 export type TodayMenu = { date: string; halls: Hall[] };
@@ -123,6 +134,7 @@ type Row = {
   station_name: string | null;
   item_name: string | null;
   recipe_id: number | null;
+  normalized_name: string | null;
   dietary_tags: string[] | null;
   has_nutrition: boolean;
   serving_size: string | null;
@@ -143,7 +155,7 @@ export async function getToday({
   const rows = await query<Row>(
     `select l.id as location_id, l.slug, l.name as location_name, md.status as menu_status,
             mp.id as meal_period_id, mp.name as meal_period_name, mp.start_time, mp.end_time,
-            s.name as station_name, mi.name as item_name, mi.recipe_id, mi.dietary_tags,
+            s.name as station_name, mi.name as item_name, mi.recipe_id, mi.normalized_name, mi.dietary_tags,
             rn.recipe_id is not null as has_nutrition, rn.serving_size,
             rn.calories::float8 as calories, rn.protein_g::float8 as protein_g,
             rn.total_carbohydrate_g::float8 as carbs_g, rn.total_fat_g::float8 as fat_g
@@ -159,6 +171,7 @@ export async function getToday({
     [date, preferences.dietFilters, preferences.allergens],
   );
 
+  const favoriteNames = new Set(preferences.favorites.map((f) => f.normalizedName));
   const halls = new Map<number, HallRows>();
   const mealPeriods = new Map<number, MealPeriod>();
   for (const row of rows) {
@@ -188,7 +201,13 @@ export async function getToday({
       station = { name: row.station_name!, items: [] };
       mealPeriod.stations.push(station);
     }
-    const item: MenuItem = { name: row.item_name, recipeId: row.recipe_id!, dietaryTags: row.dietary_tags! };
+    const item: MenuItem = {
+      name: row.item_name,
+      recipeId: row.recipe_id!,
+      normalizedName: row.normalized_name!,
+      favorite: favoriteNames.has(row.normalized_name!),
+      dietaryTags: row.dietary_tags!,
+    };
     if (row.has_nutrition) {
       item.nutrition = {
         servingSize: row.serving_size,
@@ -207,7 +226,26 @@ export async function getToday({
     halls: [...halls.values()].map(({ slug, name, menuStatus, mealPeriods }) => {
       const { status, current } = currentMeal(menuStatus, mealPeriods, time);
       const selected = mealPeriods.some((mp) => mp.name === requested) ? requested! : current;
-      return { slug, name, status, currentMealPeriod: current, selectedMealPeriod: selected, mealPeriods };
+      mealPeriods.forEach(favoritesFirst);
+      const selectedItems = mealPeriods.find((mp) => mp.name === selected)?.stations.flatMap((s) => s.items) ?? [];
+      const favoriteCount = new Set(selectedItems.filter((i) => i.favorite).map((i) => i.normalizedName)).size;
+      return {
+        slug,
+        name,
+        status,
+        currentMealPeriod: current,
+        selectedMealPeriod: selected,
+        favoriteCount,
+        mealPeriods,
+      };
     }),
   };
+}
+
+/** Stable reorder: stations serving a favorite lead, and favorites lead their station; page order otherwise. */
+function favoritesFirst(mealPeriod: MealPeriod): void {
+  const leadsWith = <T>(items: T[], isFavorite: (item: T) => boolean) =>
+    [...items.filter(isFavorite), ...items.filter((i) => !isFavorite(i))];
+  for (const station of mealPeriod.stations) station.items = leadsWith(station.items, (i) => i.favorite);
+  mealPeriod.stations = leadsWith(mealPeriod.stations, (s) => s.items.some((i) => i.favorite));
 }

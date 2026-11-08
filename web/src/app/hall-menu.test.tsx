@@ -13,9 +13,13 @@ const nutrition = (calories: number | null, proteinG: number | null) => ({
   fatG: 4,
 });
 
+/** A menu item; `normalizedName` defaults from `name`, `favorite` to false. */
+type GrillItem = Omit<MenuItem, "normalizedName" | "favorite"> & Partial<Pick<MenuItem, "normalizedName" | "favorite">>;
+
 /** Lenoir serving Brunch, with these items at The Grill. */
-const renderGrill = (items: MenuItem[]) =>
-  renderToStaticMarkup(
+const renderGrill = (grillItems: GrillItem[], favoriteCount = 0) => {
+  const items = grillItems.map((i) => ({ normalizedName: i.name.toLowerCase(), favorite: false, ...i }));
+  return renderToStaticMarkup(
     <HallMenu
       hall={{
         slug: "top-of-lenoir",
@@ -23,10 +27,12 @@ const renderGrill = (items: MenuItem[]) =>
         status: "serving",
         currentMealPeriod: "Brunch",
         selectedMealPeriod: "Brunch",
+        favoriteCount,
         mealPeriods: [{ name: "Brunch", start: "11:00", end: "15:00", stations: [{ name: "The Grill", items }] }],
       }}
     />,
   );
+};
 
 test("each item shows its calories and protein; items without nutrition still render", () => {
   const html = renderGrill([
@@ -56,4 +62,23 @@ test("items show their dietary tags as badges", () => {
   expect(burger).toContain("Vegan");
   expect(burger).toContain("Made Without Gluten");
   expect(html.slice(html.indexOf("Nashville"))).not.toContain("Vegan");
+});
+
+test("favorites are highlighted, each item has a star toggle, and the hall shows its favorite count", () => {
+  const html = renderGrill(
+    [
+      { name: "Grilled Chicken Breast", recipeId: 13708, dietaryTags: [], favorite: true },
+      { name: "Nashville Hot Chicken Biscuit", recipeId: 15469, dietaryTags: [] },
+    ],
+    1,
+  );
+
+  expect(html).toContain("1 favorite this meal");
+  const chicken = html.slice(html.indexOf('data-recipe="13708"'), html.indexOf('data-recipe="15469"'));
+  expect(chicken).toContain('data-favorite="true"');
+  expect(chicken).toContain('aria-pressed="true"');
+  expect(chicken).toContain("Unstar Grilled Chicken Breast");
+  const biscuit = html.slice(html.indexOf('data-recipe="15469"'));
+  expect(biscuit).not.toContain("data-favorite");
+  expect(biscuit).toContain("Star Nashville Hot Chicken Biscuit");
 });

@@ -7,8 +7,10 @@ import { MacroCombos } from "./macro-combos";
 
 const food = (name: string, recipeId: number, calories: number, proteinG: number): MenuItem => ({
   name,
+  normalizedName: name.toLowerCase(),
   recipeId,
   dietaryTags: [],
+  favorite: false,
   nutrition: { servingSize: "1 each", calories, proteinG, carbsG: 10, fatG: 5 },
 });
 
@@ -18,6 +20,7 @@ const hall = (slug: string, name: string, items: MenuItem[]): Hall => ({
   status: "serving",
   currentMealPeriod: "Dinner",
   selectedMealPeriod: "Dinner",
+  favoriteCount: 0,
   mealPeriods: [
     { name: "Lunch", start: "11:00", end: "14:00", stations: [{ name: "Grill", items: [food("Lunch Only Wrap", 9, 400, 60)] }] },
     { name: "Dinner", start: "17:00", end: "20:00", stations: [{ name: "Grill", items }] },
