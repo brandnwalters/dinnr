@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toggleFavorite } from "@/lib/favorites";
+import { todayQueryPreferences } from "@/lib/preferences";
 import { usePreferences } from "@/lib/preferences-store";
 import type { TodayMenu } from "@/lib/today";
 import { loadToday } from "./actions";
@@ -17,8 +18,9 @@ import styles from "./page.module.css";
 /**
  * The home page body. Preferences live on the device, so the menus are loaded
  * from the browser (through `loadToday`) once they've been read, and again
- * whenever they or the selected meal (`?meal=Dinner`, set by each hall's meal
- * switcher) change. Nothing is shown before then, so filtered-out items never
+ * whenever the selected meal (`?meal=Dinner`, set by each hall's meal
+ * switcher) or a preference the server query reads (`todayQueryPreferences`:
+ * filters, favorites) changes. Nothing is shown before then, so filtered-out items never
  * flash on screen.
  */
 export function TodayView() {
@@ -26,16 +28,18 @@ export function TodayView() {
   const meal = useSearchParams().get("meal") ?? undefined; // switches every hall that serves it today
   const [today, setToday] = useState<TodayMenu | null>(null);
 
+  // Only the fields the server query reads trigger a reload (not e.g. typing macro targets).
+  const queryKey = preferences ? JSON.stringify(todayQueryPreferences(preferences)) : null;
   useEffect(() => {
-    if (!preferences) return;
+    if (queryKey === null) return;
     let current = true;
-    loadToday(preferences, meal).then((menu) => {
+    loadToday(JSON.parse(queryKey), meal).then((menu) => {
       if (current) setToday(menu);
     });
     return () => {
       current = false;
     };
-  }, [preferences, meal]);
+  }, [queryKey, meal]);
 
   if (!preferences) return <p>Loading today&apos;s menus…</p>;
   return (

@@ -76,6 +76,19 @@ export function parsePreferences(raw: unknown): Preferences {
   return prefs;
 }
 
+/**
+ * The preferences the Today data layer (`getToday`) reads: when only other
+ * fields change (macro targets, the combo station toggle), the menus needn't
+ * be reloaded. Add a field here if `getToday` starts reading it.
+ */
+export function todayQueryPreferences({
+  dietFilters,
+  allergens,
+  favorites,
+}: Preferences): Pick<Preferences, "dietFilters" | "allergens" | "favorites"> {
+  return { dietFilters, allergens, favorites };
+}
+
 /** The stored form: preferences plus the schema version. */
 export function serializePreferences(prefs: Preferences): string {
   return JSON.stringify({ version: PREFERENCES_VERSION, ...prefs });
