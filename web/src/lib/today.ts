@@ -11,10 +11,12 @@ import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
  * dietary tags.
  *
  * `preferences` (the on-device settings, validated with `parsePreferences`)
- * filter what's returned: diet filters are strict cutoffs, so an item missing
- * any filtered tag is left out, as is a station left with no items.
+ * filter what's returned. Both filters are strict cutoffs: an item missing any
+ * filtered diet tag, or carrying any chosen allergen, is left out, as is a
+ * station left with no items. Allergen filtering relies on UNC's labels only:
+ * the UI must show `AllergenDisclaimer` alongside it.
  *
- * Later slices extend this: more preferences (favorites first, allergens).
+ * Later slices extend this: more preferences (favorites first).
  */
 
 export const DINING_TIME_ZONE = "America/New_York";
@@ -150,10 +152,11 @@ export async function getToday({
      left join meal_period mp on mp.menu_day_id = md.id
      left join menu_item mi on mi.meal_period_id = mp.id
        and mi.dietary_tags @> $2::text[] -- diet filters: every one required
+       and not (mi.allergens && $3::text[]) -- allergens: none of the chosen ones allowed
      left join station s on s.id = mi.station_id
      left join recipe_nutrition rn on rn.recipe_id = mi.recipe_id
      order by l.id, mp.position, mi.position`,
-    [date, preferences.dietFilters],
+    [date, preferences.dietFilters, preferences.allergens],
   );
 
   const halls = new Map<number, HallRows>();

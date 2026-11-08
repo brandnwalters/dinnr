@@ -4,7 +4,7 @@ Page structure (see fixtures/unc/README.md): meal periods are the tabs of
 `#menu-tabs`, each tab's `aria-controls` naming its panel. A panel holds
 `.menu-station` blocks, whose name is the `button.toggle-menu-station-data`
 text. Items are `li.menu-item-li` entries holding `<a data-recipe="ID">Name</a>`; dietary tags
-are the link's `prop-<code>` classes.
+are the link's `prop-<code>` classes and allergens its `allergen-has_<code>` classes.
 """
 
 import re
@@ -23,6 +23,7 @@ class MenuItem:
     name: str
     recipe_id: int
     dietary_tags: tuple[str, ...] = ()  # `prop-<code>` codes in page order, e.g. ("vegan", "halal")
+    allergens: tuple[str, ...] = ()  # `allergen-has_<code>` codes in page order, e.g. ("milk", "tree_nuts")
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,10 @@ def _dietary_tags(link: Tag) -> tuple[str, ...]:
     return tuple(c.removeprefix("prop-") for c in link.get("class", []) if c.startswith("prop-"))
 
 
+def _allergens(link: Tag) -> tuple[str, ...]:
+    return tuple(c.removeprefix("allergen-has_") for c in link.get("class", []) if c.startswith("allergen-has_"))
+
+
 def parse_menu(html: str) -> Menu:
     soup = BeautifulSoup(html, "html.parser")
     tabs_root = soup.find(id="menu-tabs")
@@ -108,6 +113,6 @@ def _parse_stations(panel: Tag) -> list[Station]:
                 recipe_id = int(link["data-recipe"])
             except ValueError as e:
                 raise MenuParseError(f"non-numeric recipe id {link['data-recipe']!r}") from e
-            items.append(MenuItem(_text(link), recipe_id, _dietary_tags(link)))
+            items.append(MenuItem(_text(link), recipe_id, _dietary_tags(link), _allergens(link)))
         stations.append(Station(_text(button), items))
     return stations
