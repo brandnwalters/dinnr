@@ -21,7 +21,7 @@ from dinnr.fetcher import FETCH_ERRORS, Fetcher
 from dinnr.health import RECENT_DAYS, menu_problems
 from dinnr.locations import Location
 from dinnr.menu_parser import Menu, MenuParseError, parse_menu
-from dinnr.nutrition import NutritionParseError, needs_fetch, parse_nutrition, recipe_url
+from dinnr.nutrition import Nutrition, NutritionParseError, needs_fetch, parse_nutrition, recipe_url
 from dinnr.repository import (
     menu_day_item_count,
     nutrition_fetched_at,
@@ -31,6 +31,9 @@ from dinnr.repository import (
 )
 
 log = logging.getLogger(__name__)
+
+# Nutrition labels saved per round trip; a crash loses at most the batch in flight.
+NUTRITION_BATCH = 25
 
 
 class ScrapeFailed(Exception):
@@ -51,6 +54,7 @@ def scrape(
 ) -> None:
     now = now or datetime.now(UTC)
     problems = []
+    station_ids: dict[str, int] = {}  # the halls share most station names
     for location in locations:
         try:
             html = fetcher.get(location.url)
@@ -62,7 +66,7 @@ def scrape(
         except MenuParseError as e:
             problems.append(f"{location.name}: unexpected page structure ({e}); nothing saved")
             continue
-        menu_day_id = save_menu(conn, location, today, menu)
+        menu_day_id = save_menu(conn, location, today, menu, station_ids=station_ids)
         conn.commit()
         update_nutrition(conn, fetcher, menu, now=now)
         recent = open_day_item_counts(conn, location, today - timedelta(days=RECENT_DAYS), today)
@@ -77,21 +81,33 @@ def update_nutrition(conn: psycopg.Connection, fetcher: Fetcher, menu: Menu, *, 
 
     A recipe that can't be fetched, or whose response can't be parsed, is
     logged and skipped (no row is saved), so the next run tries it again.
+    Labels are saved and committed in batches of NUTRITION_BATCH, and whatever
+    is pending when the loop stops (even on an exception) is saved first.
     """
     recipe_ids = menu.recipe_ids()
     fetched_at = nutrition_fetched_at(conn, recipe_ids)
-    for recipe_id in recipe_ids:
-        if not needs_fetch(fetched_at.get(recipe_id), now):
-            continue
-        try:
-            body = fetcher.get(recipe_url(recipe_id))
-        except FETCH_ERRORS as e:
-            log.warning("skipping nutrition for recipe %s: could not fetch it (%s)", recipe_id, e)
-            continue
-        try:
-            nutrition = parse_nutrition(body)
-        except NutritionParseError as e:
-            log.warning("skipping nutrition for recipe %s: %s", recipe_id, e)
-            continue
-        save_nutrition(conn, recipe_id, nutrition, now)
+    pending: dict[int, Nutrition] = {}
+
+    def flush() -> None:
+        save_nutrition(conn, pending, now)
         conn.commit()
+        pending.clear()
+
+    try:
+        for recipe_id in recipe_ids:
+            if not needs_fetch(fetched_at.get(recipe_id), now):
+                continue
+            try:
+                body = fetcher.get(recipe_url(recipe_id))
+            except FETCH_ERRORS as e:
+                log.warning("skipping nutrition for recipe %s: could not fetch it (%s)", recipe_id, e)
+                continue
+            try:
+                pending[recipe_id] = parse_nutrition(body)
+            except NutritionParseError as e:
+                log.warning("skipping nutrition for recipe %s: %s", recipe_id, e)
+                continue
+            if len(pending) >= NUTRITION_BATCH:
+                flush()
+    finally:
+        flush()
