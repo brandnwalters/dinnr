@@ -128,5 +128,5 @@ test("a meal period where every item has a chosen allergen is still listed, with
 
   const today = await getToday({ now: SAT_LUNCHTIME, preferences: { ...DEFAULT_PREFERENCES, allergens: ["wheat"] } });
 
-  expect(today.halls[0].mealPeriods).toEqual([{ name: "Brunch", start: null, end: null, stations: [] }]);
+  expect(today.halls[0].mealPeriods).toEqual([{ name: "Brunch", start: null, end: null, favorites: [], stations: [] }]);
 });

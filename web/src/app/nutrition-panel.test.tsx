@@ -18,6 +18,7 @@ test("each menu item is a button that opens its nutrition and ingredients", () =
             name: "Brunch",
             start: "11:00",
             end: "15:00",
+            favorites: [],
             stations: [
               {
                 name: "The Grill",

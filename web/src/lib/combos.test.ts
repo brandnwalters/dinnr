@@ -265,6 +265,7 @@ const mealPeriod = (items: MenuItem[]): MealPeriod => ({
   name: "Dinner",
   start: "17:00",
   end: "20:00",
+  favorites: [],
   stations: [{ name: "The Grill", items }],
 });
 

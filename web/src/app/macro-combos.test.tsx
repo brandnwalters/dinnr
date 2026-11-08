@@ -24,11 +24,12 @@ const hall = (slug: string, name: string, items: MenuItem[]): Hall => ({
   selectedMealPeriod: "Dinner",
   favoriteCount: 0,
   mealPeriods: [
-    { name: "Lunch", start: "11:00", end: "14:00", stations: [{ name: "Grill", items: [food("Lunch Only Wrap", 9, 400, 60)] }] },
+    { name: "Lunch", start: "11:00", end: "14:00", favorites: [], stations: [{ name: "Grill", items: [food("Lunch Only Wrap", 9, 400, 60)] }] },
     {
       name: "Dinner",
       start: "17:00",
       end: "20:00",
+      favorites: [],
       stations: [
         { name: "Grill", items },
         { name: "Condiments and Spreads", excludedFromCombos: true, items: [food("Peanut Butter", 8, 190, 8)] },
