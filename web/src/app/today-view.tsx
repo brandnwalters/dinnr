@@ -76,6 +76,8 @@ export function TodayView() {
             onIncludeExcludedStationsChange={(includeExcludedStations) =>
               updatePreferences((p) => ({ ...p, includeExcludedStations }))
             }
+            dietFilters={preferences.dietFilters}
+            allergens={preferences.allergens}
           />
         </>
       )}

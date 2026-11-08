@@ -10,7 +10,10 @@ import {
   type MacroRange,
   type MacroTargets,
 } from "@/lib/combos";
+import type { Allergen } from "@/lib/allergens";
+import type { DietaryTag } from "@/lib/dietary-tags";
 import type { Hall } from "@/lib/today";
+import { AllergenDisclaimer } from "./allergen-disclaimer";
 
 const LABELS: Record<Macro, { name: string; unit: string }> = {
   calories: { name: "Calories", unit: "cal" },
@@ -79,22 +82,35 @@ function ComboTotals({ combo, targets }: { combo: Combo; targets: MacroTargets }
   );
 }
 
+/** The user's filters, applied by the engine (favorites come with the items). */
+type ComboFilters = {
+  includeExcludedStations: boolean;
+  dietFilters: readonly DietaryTag[];
+  allergens: readonly Allergen[];
+};
+
 /** One hall's top combos from its selected meal period. */
 function HallCombos({
   hall,
   targets,
   includeExcludedStations,
-}: {
-  hall: Hall;
-  targets: MacroTargets;
-  includeExcludedStations: boolean;
-}) {
+  dietFilters,
+  allergens,
+}: { hall: Hall; targets: MacroTargets } & ComboFilters) {
   const mealPeriod = hall.mealPeriods.find((mp) => mp.name === hall.selectedMealPeriod);
   // Pure and fast (< 1 s worst case for a real menu), so it runs here on every targets/menu change.
   const result = useMemo(
     () =>
-      mealPeriod ? suggestCombos({ items: comboItemsFrom(mealPeriod), targets, includeExcludedStations }) : null,
-    [mealPeriod, targets, includeExcludedStations],
+      mealPeriod
+        ? suggestCombos({
+            items: comboItemsFrom(mealPeriod),
+            targets,
+            includeExcludedStations,
+            dietFilters,
+            allergens,
+          })
+        : null,
+    [mealPeriod, targets, includeExcludedStations, dietFilters, allergens],
   );
   return (
     <section aria-labelledby={`combos-${hall.slug}`}>
@@ -122,7 +138,8 @@ function HallCombos({
 
 /**
  * Macro combos: the targets form, the condiment-type stations toggle and, for
- * each hall, combos that meet the targets.
+ * each hall, combos that meet the targets. Combos respect the diet/allergen
+ * filters (with the allergen disclaimer when one is on) and favor favorites.
  */
 export function MacroCombos({
   halls,
@@ -130,17 +147,22 @@ export function MacroCombos({
   onTargetsChange,
   includeExcludedStations,
   onIncludeExcludedStationsChange,
+  dietFilters,
+  allergens,
 }: {
   halls: Hall[];
   targets: MacroTargets;
   onTargetsChange: (targets: MacroTargets) => void;
   includeExcludedStations: boolean;
   onIncludeExcludedStationsChange: (include: boolean) => void;
+  dietFilters: readonly DietaryTag[];
+  allergens: readonly Allergen[];
 }) {
   const anyTarget = Object.keys(targets).length > 0;
   return (
     <section aria-labelledby="macro-combos">
       <h2 id="macro-combos">Macro combos</h2>
+      <AllergenDisclaimer allergens={allergens} />
       <TargetsForm targets={targets} onChange={onTargetsChange} />
       <label>
         <input
@@ -157,6 +179,8 @@ export function MacroCombos({
             hall={hall}
             targets={targets}
             includeExcludedStations={includeExcludedStations}
+            dietFilters={dietFilters}
+            allergens={allergens}
           />)
       ) : (
         <p>Set at least one target to see combos of up to 3 items from each hall.</p>

@@ -1,6 +1,7 @@
 // Seam 2: the combo engine, a pure function from items with nutrition + macro targets to ranked combos.
 import { expect, test } from "vitest";
-import { suggestCombos, type ComboItem } from "./combos";
+import { comboItemsFrom, suggestCombos, type ComboItem } from "./combos";
+import type { MealPeriod, MenuItem } from "./today";
 
 let nextId = 1;
 /** A hand-built menu item with whole-serving macros. */
@@ -171,4 +172,126 @@ test("items from excluded stations are included when the toggle is on", () => {
     "2x Chicken Breast",
     "1x Peanut Butter + 1x Chicken Breast",
   ]);
+});
+
+test("items hidden by the diet filters never appear in combos", () => {
+  // Without filters the steak would lead (right on the 30 g aim); the vegan filter hides it and the eggs.
+  const steak: ComboItem = { ...item("Steak", 300, 30), dietaryTags: [] };
+  const tofu: ComboItem = { ...item("Tofu Bowl", 350, 20), dietaryTags: ["vegan", "vegetarian"] };
+  const eggs: ComboItem = { ...item("Scrambled Eggs", 200, 12), dietaryTags: ["vegetarian"] };
+
+  const { combos } = suggestCombos({
+    items: [steak, tofu, eggs],
+    targets: { proteinG: { min: 20, max: 40 } },
+    dietFilters: ["vegan"],
+  });
+
+  expect(described(combos)).toEqual(["1x Tofu Bowl", "2x Tofu Bowl"]);
+});
+
+test("items carrying a filtered allergen never appear in combos", () => {
+  const omelet: ComboItem = { ...item("Omelet", 300, 30), allergens: ["egg", "milk"] };
+  const chicken: ComboItem = { ...item("Chicken Breast", 140, 25), allergens: [] };
+  const salmon: ComboItem = { ...item("Salmon", 280, 34), allergens: ["fish"] };
+
+  const { combos } = suggestCombos({
+    items: [omelet, chicken, salmon],
+    targets: { proteinG: { min: 20, max: 40 } },
+    allergens: ["milk", "fish"],
+  });
+
+  expect(described(combos)).toEqual(["1x Chicken Breast"]);
+});
+
+test("among combos with the same number of items, ones with a favorite rank before closer ones without", () => {
+  // Protein 20-40 g (aim 30): Steak is right on it, the favorite Chicken 5 g off, Tofu 8 g off.
+  const steak = item("Steak", 300, 30);
+  const chicken: ComboItem = { ...item("Chicken Breast", 140, 25), favorite: true };
+  const tofu = item("Tofu Bowl", 350, 22);
+
+  const { combos } = suggestCombos({ items: [steak, tofu, chicken], targets: { proteinG: { min: 20, max: 40 } } });
+
+  // Only singles fit (every double is over 40 g); the favorite leads, then by distance.
+  expect(described(combos)).toEqual(["1x Chicken Breast", "1x Steak", "1x Tofu Bowl"]);
+});
+
+test("a favorite far from the targets still makes the top 5 when many closer items fit", () => {
+  // Protein 20-40 g (aim 30): eight dishes at 29-31 g, then the favorite at 21 g, last on the menu.
+  const close = Array.from({ length: 8 }, (_, i) => item(`Dish ${i}`, 300, 29 + (i % 3)));
+  const salad: ComboItem = { ...item("Chicken Salad", 200, 21), favorite: true };
+
+  const { combos } = suggestCombos({ items: [...close, salad], targets: { proteinG: { min: 20, max: 40 } } });
+
+  expect(described(combos)[0]).toBe("1x Chicken Salad");
+  expect(combos).toHaveLength(5);
+});
+
+test("a favorite never lifts a combo above one with fewer items", () => {
+  // Protein 35-45 g: Steak alone fits; the favorite needs a second item.
+  const steak = item("Steak", 300, 40);
+  const chicken: ComboItem = { ...item("Chicken Breast", 140, 25), favorite: true };
+  const rice = item("Rice", 200, 15);
+
+  const { combos } = suggestCombos({ items: [steak, chicken, rice], targets: { proteinG: { min: 35, max: 45 } } });
+
+  expect(described(combos)).toEqual(["1x Steak", "1x Chicken Breast + 1x Rice"]);
+});
+
+test("pairs containing a favorite rank before closer pairs without one", () => {
+  // Protein 50-60 g (aim 55); no item fits alone, even at 2 servings (48, 62, 66 g).
+  const beans = item("Beans", 150, 24);
+  const lentils = item("Lentils", 150, 31); // + Beans = 55, right on the aim
+  const egg: ComboItem = { ...item("Egg", 70, 33), favorite: true }; // + Beans = 57; + Lentils = 64, too much
+
+  const { combos } = suggestCombos({ items: [beans, lentils, egg], targets: { proteinG: { min: 50, max: 60 } } });
+
+  expect(described(combos)).toEqual(["1x Beans + 1x Egg", "1x Beans + 1x Lentils"]);
+});
+
+/** A Today menu item with full macros, as `getToday` returns it. */
+function menuItem(name: string, recipeId: number, proteinG: number, extra: Partial<MenuItem> = {}): MenuItem {
+  return {
+    name,
+    recipeId,
+    normalizedName: name.toLowerCase(),
+    favorite: false,
+    dietaryTags: [],
+    allergens: [],
+    nutrition: { servingSize: "1 each", calories: 10 * proteinG, proteinG, carbsG: 0, fatG: 0 },
+    ...extra,
+  };
+}
+const mealPeriod = (items: MenuItem[]): MealPeriod => ({
+  name: "Dinner",
+  start: "17:00",
+  end: "20:00",
+  stations: [{ name: "The Grill", items }],
+});
+
+test("a meal period's items keep their diet tags and allergens, so the filters apply to them", () => {
+  const dinner = mealPeriod([
+    menuItem("Fish Tacos", 1, 30, { dietaryTags: [], allergens: ["fish", "wheat"] }),
+    menuItem("Bean Burrito", 2, 25, { dietaryTags: ["vegetarian"], allergens: ["wheat", "milk"] }),
+    menuItem("Tofu Stir Fry", 3, 22, { dietaryTags: ["vegan", "vegetarian"], allergens: ["soy"] }),
+  ]);
+  const targets = { proteinG: { min: 20, max: 35 } };
+
+  const vegetarian = suggestCombos({ items: comboItemsFrom(dinner), targets, dietFilters: ["vegetarian"] });
+  const noMilk = suggestCombos({ items: comboItemsFrom(dinner), targets, allergens: ["milk"] });
+
+  expect(described(vegetarian.combos)).toEqual(["1x Bean Burrito", "1x Tofu Stir Fry"]);
+  expect(described(noMilk.combos)).toEqual(["1x Fish Tacos", "1x Tofu Stir Fry"]);
+});
+
+test("a meal period's favorite items lead the combos built from it", () => {
+  // Protein 20-35 g (aim 27.5): the Burrito is closest, the favorite Tofu farthest.
+  const dinner = mealPeriod([
+    menuItem("Fish Tacos", 1, 30),
+    menuItem("Bean Burrito", 2, 27),
+    menuItem("Tofu Stir Fry", 3, 21, { favorite: true }),
+  ]);
+
+  const { combos } = suggestCombos({ items: comboItemsFrom(dinner), targets: { proteinG: { min: 20, max: 35 } } });
+
+  expect(described(combos)).toEqual(["1x Tofu Stir Fry", "1x Bean Burrito", "1x Fish Tacos"]);
 });

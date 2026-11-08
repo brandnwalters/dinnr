@@ -28,6 +28,7 @@ test("each menu item is a button that opens its nutrition and ingredients", () =
                     normalizedName: "chicken breast",
                     favorite: false,
                     dietaryTags: [],
+                    allergens: [],
                   },
                 ],
               },
