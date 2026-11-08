@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DietaryTagBadges } from "./dietary-tag-badges";
 import { FavoriteButton, FavoriteCount } from "./favorite-button";
+import { NutritionButton } from "./nutrition-panel";
 import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
 
 /** "140 cal · 25 g protein", leaving out whatever the label doesn't give. */
@@ -92,7 +93,8 @@ export function HallMenu({
                     data-recipe={item.recipeId}
                     data-favorite={item.favorite ? "true" : undefined}
                   >
-                    <FavoriteButton item={item} onToggle={onToggleFavorite} /> {item.name}
+                    <FavoriteButton item={item} onToggle={onToggleFavorite} />{" "}
+                    <NutritionButton recipeId={item.recipeId} name={item.name} />
                     <DietaryTagBadges tags={item.dietaryTags} />
                     <MacroSummary item={item} />
                   </li>

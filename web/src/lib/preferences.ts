@@ -1,3 +1,4 @@
+import { isAllergen, type Allergen } from "./allergens";
 import { isDietaryTag, type DietaryTag } from "./dietary-tags";
 import { parseFavorites, type FavoriteDish } from "./favorites";
 
@@ -19,6 +20,8 @@ import { parseFavorites, type FavoriteDish } from "./favorites";
 export type Preferences = {
   /** Strict cutoffs: an item must carry every one of these tags to be shown. */
   dietFilters: DietaryTag[];
+  /** Strict cutoffs: an item carrying any of these allergens is hidden. */
+  allergens: Allergen[];
   /** Starred dishes, matched by normalized name at any station or hall (see `favorites.ts`). */
   favorites: FavoriteDish[];
 };
@@ -27,6 +30,7 @@ export const PREFERENCES_VERSION = 1;
 
 export const DEFAULT_PREFERENCES: Preferences = {
   dietFilters: [],
+  allergens: [],
   favorites: [],
 };
 
@@ -34,6 +38,7 @@ type FieldParsers = { [K in keyof Preferences]: (raw: unknown) => Preferences[K]
 
 const FIELD_PARSERS: FieldParsers = {
   dietFilters: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isDietaryTag))] : undefined),
+  allergens: (raw) => (Array.isArray(raw) ? [...new Set(raw.filter(isAllergen))] : undefined),
   favorites: parseFavorites,
 };
 

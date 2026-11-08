@@ -8,7 +8,13 @@ import { normalizeName } from "@/lib/favorites";
  */
 
 /** `normalizedName` defaults to the scraper's rule applied to `name`. */
-export type SeedItem = { name: string; recipeId: number; dietaryTags?: string[]; normalizedName?: string };
+export type SeedItem = {
+  name: string;
+  recipeId: number;
+  dietaryTags?: string[];
+  allergens?: string[];
+  normalizedName?: string;
+};
 export type SeedStation = { name: string; items: SeedItem[] };
 /** `start`/`end` are local wall-clock times ("HH:MM"); omit for a label without hours. */
 export type SeedMealPeriod = { name: string; start?: string; end?: string; stations: SeedStation[] };
@@ -29,14 +35,27 @@ export type SeedNutrition = {
   carbsG?: number | null;
   fatG?: number | null;
   fetchedAt?: string;
+  // The rest of the label, for the nutrition detail panel.
+  name?: string | null;
+  saturatedFatG?: number | null;
+  transFatG?: number | null;
+  cholesterolMg?: number | null;
+  sodiumMg?: number | null;
+  fiberG?: number | null;
+  sugarsG?: number | null;
+  addedSugarG?: number | null;
+  micronutrients?: { name: string; amount: number | null; unit: string }[];
+  ingredients?: string | null;
 };
 
 /** Seed one recipe's nutrition (a recipe_nutrition row, as the scraper saves it). */
 export async function seedNutrition(n: SeedNutrition): Promise<void> {
   await query(
     `insert into recipe_nutrition
-       (recipe_id, serving_size, calories, protein_g, total_carbohydrate_g, total_fat_g, fetched_at)
-     values ($1, $2, $3, $4, $5, $6, $7)`,
+       (recipe_id, serving_size, calories, protein_g, total_carbohydrate_g, total_fat_g, fetched_at,
+        name, saturated_fat_g, trans_fat_g, cholesterol_mg, sodium_mg, dietary_fiber_g, sugars_g,
+        added_sugar_g, micronutrients, ingredients)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
     [
       n.recipeId,
       n.servingSize ?? null,
@@ -45,6 +64,16 @@ export async function seedNutrition(n: SeedNutrition): Promise<void> {
       n.carbsG ?? null,
       n.fatG ?? null,
       n.fetchedAt ?? "2026-11-07T14:00:00Z",
+      n.name ?? null,
+      n.saturatedFatG ?? null,
+      n.transFatG ?? null,
+      n.cholesterolMg ?? null,
+      n.sodiumMg ?? null,
+      n.fiberG ?? null,
+      n.sugarsG ?? null,
+      n.addedSugarG ?? null,
+      JSON.stringify(n.micronutrients ?? []),
+      n.ingredients ?? null,
     ],
   );
 }
@@ -91,8 +120,9 @@ export async function seedMenuDay(day: SeedMenuDay): Promise<void> {
       );
       for (const item of station.items) {
         await query(
-          `insert into menu_item (meal_period_id, station_id, recipe_id, name, position, dietary_tags, normalized_name)
-           values ($1, $2, $3, $4, $5, $6, $7)`,
+          `insert into menu_item
+             (meal_period_id, station_id, recipe_id, name, position, dietary_tags, allergens, normalized_name)
+           values ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
             mp.id,
             st.id,
@@ -100,6 +130,7 @@ export async function seedMenuDay(day: SeedMenuDay): Promise<void> {
             item.name,
             position++,
             item.dietaryTags ?? [],
+            item.allergens ?? [],
             item.normalizedName ?? normalizeName(item.name),
           ],
         );
