@@ -59,7 +59,9 @@ def all_menu_rows(db):
         "menu_day": "select id, location_id, date, status from menu_day order by id",
         "meal_period": "select id, menu_day_id, name, position, start_time, end_time from meal_period order by id",
         "station": "select id, name from station order by id",
-        "menu_item": "select id, meal_period_id, station_id, recipe_id, name, position from menu_item order by id",
+        "menu_item": (
+            "select id, meal_period_id, station_id, recipe_id, name, position, dietary_tags from menu_item order by id"
+        ),
     }
     return {table: db.execute(query).fetchall() for table, query in queries.items()}
 
@@ -234,3 +236,37 @@ def test_a_later_run_the_same_day_updates_open_closed_status(db, clean_db):
     scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
 
     assert lenoir_day(db)[0] == "open"
+
+
+def lenoir_dietary_tags(db):
+    """{(meal period, station, item name): dietary tags} for Lenoir on TODAY."""
+    rows = db.execute(
+        """
+        select mp.name, s.name, mi.name, mi.dietary_tags
+        from menu_item mi
+        join meal_period mp on mp.id = mi.meal_period_id
+        join menu_day md on md.id = mp.menu_day_id
+        join location l on l.id = md.location_id
+        join station s on s.id = mi.station_id
+        where l.slug = 'top-of-lenoir' and md.date = %s
+        """,
+        (TODAY,),
+    ).fetchall()
+    return {(mp, st, name): tags for mp, st, name, tags in rows}
+
+
+def test_a_run_saves_each_items_dietary_tags(db, clean_db):
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+
+    tags = lenoir_dietary_tags(db)
+    # Read off the fixture's `prop-*` classes, in page order.
+    assert tags[("Continental", "Waffle Bar", "Waffle")] == ["vegetarian", "halal"]
+    assert tags[("Brunch", "The Grill", "Nashville Hot Chicken Biscuit")] == []
+    coffee = {tuple(t) for (_, _, name), t in tags.items() if name == "Larry's® Decaf Coffee"}
+    assert coffee == {
+        ("vegan", "vegetarian", "smart_choice", "local", "organic", "made_without_gluten", "halal")
+    }
+    # Fixture counts of `prop-vegan` / `prop-local` on items (the page's legend aside).
+    all_tags = [t for item_tags in tags.values() for t in item_tags]
+    assert all_tags.count("vegan") == 224
+    assert all_tags.count("local") == 8

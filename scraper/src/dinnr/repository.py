@@ -74,13 +74,22 @@ def save_menu(conn: psycopg.Connection, location: Location, day: date, menu: Men
                     item_ids.append(
                         conn.execute(
                             """
-                            insert into menu_item (meal_period_id, station_id, recipe_id, name, position)
-                            values (%s, %s, %s, %s, %s)
+                            insert into menu_item
+                                (meal_period_id, station_id, recipe_id, name, position, dietary_tags)
+                            values (%s, %s, %s, %s, %s, %s)
                             on conflict (meal_period_id, station_id, recipe_id)
-                            do update set name = excluded.name, position = excluded.position
+                            do update set name = excluded.name, position = excluded.position,
+                                          dietary_tags = excluded.dietary_tags
                             returning id
                             """,
-                            (meal_period_id, station_id, item.recipe_id, item.name, position),
+                            (
+                                meal_period_id,
+                                station_id,
+                                item.recipe_id,
+                                item.name,
+                                position,
+                                list(item.dietary_tags),
+                            ),
                         ).fetchone()[0]
                     )
                     position += 1

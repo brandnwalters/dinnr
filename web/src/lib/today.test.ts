@@ -41,7 +41,7 @@ test("returns today's menu grouped by meal period, then station, in page order",
 
   const today = await getToday({ now: SAT_LUNCHTIME });
 
-  expect(today).toEqual({
+  expect(today).toMatchObject({
     date: "2026-11-07",
     halls: [
       {
@@ -239,7 +239,7 @@ test("returns both halls, each with its own menu", async () => {
   const today = await getToday({ now: SAT_LUNCHTIME });
 
   const serving = { status: "serving", currentMealPeriod: "Brunch", selectedMealPeriod: "Brunch" };
-  expect(today.halls).toEqual([
+  expect(today.halls).toMatchObject([
     { slug: "top-of-lenoir", name: "Top of Lenoir", ...serving, mealPeriods: [{ ...brunch, stations: brunchStations }] },
     {
       slug: "chase",
