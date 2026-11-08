@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { usePreferences } from "@/lib/preferences-store";
 import type { TodayMenu } from "@/lib/today";
 import { loadToday } from "./actions";
+import { AllergenDisclaimer } from "./allergen-disclaimer";
+import { AllergenFilters } from "./allergen-filters";
 import { DietFilters } from "./diet-filters";
 import { HallMenu } from "./hall-menu";
 import styles from "./page.module.css";
@@ -39,6 +41,11 @@ export function TodayView() {
         selected={preferences.dietFilters}
         onChange={(dietFilters) => updatePreferences((p) => ({ ...p, dietFilters }))}
       />
+      <AllergenFilters
+        selected={preferences.allergens}
+        onChange={(allergens) => updatePreferences((p) => ({ ...p, allergens }))}
+      />
+      <AllergenDisclaimer allergens={preferences.allergens} />
       {today === null ? (
         <p>Loading today&apos;s menus…</p>
       ) : (

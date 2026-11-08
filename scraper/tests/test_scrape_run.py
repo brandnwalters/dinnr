@@ -270,3 +270,38 @@ def test_a_run_saves_each_items_dietary_tags(db, clean_db):
     all_tags = [t for item_tags in tags.values() for t in item_tags]
     assert all_tags.count("vegan") == 224
     assert all_tags.count("local") == 8
+
+
+def lenoir_allergens(db):
+    """(meal period, station, item name, allergens) rows for Lenoir on TODAY."""
+    return db.execute(
+        """
+        select mp.name, s.name, mi.name, mi.allergens
+        from menu_item mi
+        join meal_period mp on mp.id = mi.meal_period_id
+        join menu_day md on md.id = mp.menu_day_id
+        join location l on l.id = md.location_id
+        join station s on s.id = mi.station_id
+        where l.slug = 'top-of-lenoir' and md.date = %s
+        """,
+        (TODAY,),
+    ).fetchall()
+
+
+def test_a_run_saves_each_items_allergens(db, clean_db):
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+
+    rows = lenoir_allergens(db)
+    by_item = {(mp, st, name): allergens for mp, st, name, allergens in rows}
+    # Read off the fixture's `allergen-has_*` classes, in page order, without the `has_` prefix.
+    assert by_item[("Continental", "Waffle Bar", "Waffle")] == ["wheat", "milk", "gluten"]
+    assert by_item[("Continental", "Waffle Bar", "Whipped Topping")] == ["soy"]
+    caesar = {tuple(a) for _, _, name, a in rows if name == "Creamy Caesar Dressing"}
+    assert caesar == {("milk", "fish")}
+    # Fixture counts of `allergen-has_*` classes on the 348 item links (the page's filter form aside).
+    all_allergens = [a for *_, item_allergens in rows for a in item_allergens]
+    assert len(rows) == 348
+    assert all_allergens.count("milk") == 85
+    assert all_allergens.count("tree_nuts") == 1
+    assert all_allergens.count("peanut") == 0
+    assert len(all_allergens) == 85 + 82 + 67 + 51 + 30 + 9 + 2 + 1
