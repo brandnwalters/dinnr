@@ -61,6 +61,12 @@ class Menu:
         """A page with no meal periods means the hall is closed that day."""
         return not self.meal_periods
 
+    def recipe_ids(self) -> list[int]:
+        """Every recipe on the menu, once each, in page order."""
+        return list(
+            dict.fromkeys(item.recipe_id for mp in self.meal_periods for station in mp.stations for item in station.items)
+        )
+
 
 def normalize_name(name: str) -> str:
     """How favorites match a dish: lowercased, trimmed, whitespace collapsed."""

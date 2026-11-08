@@ -11,7 +11,7 @@ const SAT_LUNCHTIME = new Date("2026-11-07T17:30:00Z");
 beforeEach(resetDb);
 afterAll(closeDb);
 
-test("items only served at stations flagged as excluded from combos are marked excluded", async () => {
+test("items only served at stations flagged as excluded from combos are marked excluded from combos", async () => {
   await seedMenuDay({
     location: LENOIR,
     date: "2026-11-07",
@@ -46,7 +46,7 @@ test("items only served at stations flagged as excluded from combos are marked e
   const today = await getToday({ now: SAT_LUNCHTIME });
   const items = comboItemsFrom(today.halls[0].mealPeriods[0]);
 
-  expect(items.map((it) => [it.name, it.excluded ?? false])).toEqual([
+  expect(items.map((it) => [it.name, it.excludedFromCombos ?? false])).toEqual([
     ["Peanut Butter", true],
     ["Honey", false],
     ["Waffle", false],

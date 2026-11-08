@@ -51,12 +51,17 @@ with `--archive-dir`). CI keeps these as an artifact for 90 days: see "Raw page 
 It also fetches `recipe.php` nutrition for each recipe on the menu that has never been fetched or
 was fetched more than 30 days ago (`recipe_nutrition.fetched_at`). The first run against an empty
 database therefore fetches a few hundred recipes at ~5 s each (tens of minutes); later runs fetch
-only new or stale recipes. A recipe response that can't be parsed is logged and retried next run.
+only new or stale recipes. A recipe that can't be fetched (HTTP error, timeout) or parsed is logged and
+retried next run.
+
+Each hall's menu, and its nutrition, is committed as soon as it's saved, so a run that dies part way
+keeps every hall and recipe saved before that point.
 
 Health checks (`scraper/src/dinnr/health.py`): the run exits 1, printing one `<hall>: <reason>` line per
-failing hall to stderr, when a hall's page isn't in the expected shape (nothing is saved for it), when
+failing hall to stderr, when a hall's page can't be fetched or isn't in the expected shape (nothing is saved for it), when
 a hall that isn't closed has no items, or when its item count is under half its recent normal (median
-of its open days in the previous 14 days). Every other hall is still scraped and saved. A location page
+of its comparable open days in the previous 14 days: weekends are compared with weekends and weekdays
+with weekdays, since weekend menus are much smaller; skipped with no comparable history). Every other hall is still scraped and saved. A location page
 with no meal period tabs is a closed day and never fails.
 
 ## Tests

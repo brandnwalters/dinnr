@@ -13,6 +13,7 @@ The network itself is a `Transport` (url, headers) -> (status, body), injected
 so the fetcher's politeness can be tested without touching the live site.
 """
 
+import http.client
 import re
 import time
 import urllib.error
@@ -46,6 +47,12 @@ class FetchError(RuntimeError):
 
 class DisallowedURLError(FetchError):
     """We refused to request this URL (robots.txt or our own rules)."""
+
+
+# What a failed fetch can raise: an error status or refused URL, or the network
+# failing underneath (timeouts and connection errors are OSErrors, a response
+# cut short is an HTTPException).
+FETCH_ERRORS: tuple[type[Exception], ...] = (FetchError, OSError, http.client.HTTPException)
 
 
 Transport = Callable[[str, dict[str, str]], tuple[int, str]]

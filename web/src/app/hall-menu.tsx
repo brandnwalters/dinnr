@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { DietaryTagBadges } from "./dietary-tag-badges";
 import { FavoriteButton, FavoriteCount } from "./favorite-button";
 import { NutritionButton } from "./nutrition-panel";
@@ -42,7 +43,32 @@ function statusText(hall: Hall): string {
   }
 }
 
-/** One hall's status, a switcher for today's meal periods, and the selected meal's menu. */
+/** One dish in the list: star, name (opens its nutrition), `children`, badges and macros. */
+function ItemRow({
+  item,
+  onToggleFavorite,
+  children,
+}: {
+  item: MenuItem;
+  onToggleFavorite?: (item: MenuItem) => void;
+  children?: ReactNode;
+}) {
+  return (
+    <li data-recipe={item.recipeId} data-favorite={item.favorite ? "true" : undefined}>
+      <FavoriteButton item={item} onToggle={onToggleFavorite} />{" "}
+      <NutritionButton recipeId={item.recipeId} name={item.name} />
+      {children}
+      <DietaryTagBadges tags={item.dietaryTags} />
+      <MacroSummary item={item} />
+    </li>
+  );
+}
+
+/**
+ * One hall's status, a switcher for today's meal periods, and the selected
+ * meal's menu: the user's favorites first ("Your favorites", each with its
+ * station), then every station in page order.
+ */
 export function HallMenu({
   hall,
   onToggleFavorite,
@@ -83,21 +109,24 @@ export function HallMenu({
             {hours(selected) && ` · ${hours(selected)}`}
           </h3>
           {selected.stations.length === 0 && <p>No items match your filters.</p>}
+          {selected.favorites.length > 0 && (
+            <section className="favorites-group">
+              <h4>Your favorites</h4>
+              <ul>
+                {selected.favorites.map(({ station, item }) => (
+                  <ItemRow key={`${station}:${item.recipeId}`} item={item} onToggleFavorite={onToggleFavorite}>
+                    <small className="favorite-station"> · {station}</small>
+                  </ItemRow>
+                ))}
+              </ul>
+            </section>
+          )}
           {selected.stations.map((station) => (
             <section key={station.name}>
               <h4>{station.name}</h4>
               <ul>
                 {station.items.map((item) => (
-                  <li
-                    key={item.recipeId}
-                    data-recipe={item.recipeId}
-                    data-favorite={item.favorite ? "true" : undefined}
-                  >
-                    <FavoriteButton item={item} onToggle={onToggleFavorite} />{" "}
-                    <NutritionButton recipeId={item.recipeId} name={item.name} />
-                    <DietaryTagBadges tags={item.dietaryTags} />
-                    <MacroSummary item={item} />
-                  </li>
+                  <ItemRow key={item.recipeId} item={item} onToggleFavorite={onToggleFavorite} />
                 ))}
               </ul>
             </section>

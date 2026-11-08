@@ -1,4 +1,4 @@
-// Seam 3: favorites in the Today data layer (matched by normalized name, shown first, counted per hall).
+// Seam 3: favorites in the Today data layer (matched by normalized name, listed first per meal, counted per hall).
 import { afterAll, beforeEach, expect, test } from "vitest";
 import { resetDb, seedMenuDay, type SeedStation } from "../../test/seed";
 import { closeDb } from "./db";
@@ -75,27 +75,51 @@ test("with no favorites, page order is kept and nothing is counted", async () =>
   const [lenoir] = (await getToday({ now: SAT_LUNCHTIME })).halls;
 
   expect(lenoir.favoriteCount).toBe(0);
+  expect(brunchOf(lenoir).favorites).toEqual([]);
   expect(layout(lenoir)).toEqual([
     ["Waffle Bar", ["Waffle", "Pancake Syrup"]],
     ["The Grill", ["Nashville Hot Chicken Biscuit", "Grilled Chicken Breast", "Black Bean Burger Patty"]],
   ]);
 });
 
-test("favorites come first: stations serving one lead, and favorites lead their station", async () => {
+const favoritesGroup = (hall: Hall) => brunchOf(hall).favorites.map(({ station, item }) => [station, item.name]);
+
+test("favorites lead the hall's list, with their station, and stations stay in page order below", async () => {
   await seedBothHalls();
 
   const [lenoir, chase] = (
-    await getToday({ now: SAT_LUNCHTIME, preferences: favorites("Grilled Chicken Breast") })
+    await getToday({ now: SAT_LUNCHTIME, preferences: favorites("Grilled Chicken Breast", "Pancake Syrup") })
   ).halls;
 
+  // In page order across the whole meal, not only within a station.
+  expect(favoritesGroup(lenoir)).toEqual([
+    ["Waffle Bar", "Pancake Syrup"],
+    ["The Grill", "Grilled Chicken Breast"],
+  ]);
+  expect(favoritesGroup(chase)).toEqual([["Hot Line", "GRILLED  chicken Breast"]]);
   expect(layout(lenoir)).toEqual([
-    ["The Grill", ["Grilled Chicken Breast", "Nashville Hot Chicken Biscuit", "Black Bean Burger Patty"]],
     ["Waffle Bar", ["Waffle", "Pancake Syrup"]],
+    ["The Grill", ["Nashville Hot Chicken Biscuit", "Grilled Chicken Breast", "Black Bean Burger Patty"]],
   ]);
   expect(layout(chase)).toEqual([
-    ["Hot Line", ["GRILLED  chicken Breast"]],
     ["Pizza", ["Cheese Pizza"]],
+    ["Hot Line", ["GRILLED  chicken Breast"]],
   ]);
+});
+
+test("a favorite served at two stations is listed with each", async () => {
+  await brunch(LENOIR, [
+    { name: "Waffle Bar", items: [{ name: "Pancake Syrup", recipeId: 10329 }] },
+    { name: "Plant Forward", items: [{ name: "Pancake Syrup", recipeId: 10329 }] },
+  ]);
+
+  const [lenoir] = (await getToday({ now: SAT_LUNCHTIME, preferences: favorites("Pancake Syrup") })).halls;
+
+  expect(favoritesGroup(lenoir)).toEqual([
+    ["Waffle Bar", "Pancake Syrup"],
+    ["Plant Forward", "Pancake Syrup"],
+  ]);
+  expect(lenoir.favoriteCount).toBe(1);
 });
 
 test("a favorite matches the same dish in both halls, whatever its recipe id or spelling", async () => {
@@ -105,8 +129,8 @@ test("a favorite matches the same dish in both halls, whatever its recipe id or 
     await getToday({ now: SAT_LUNCHTIME, preferences: favorites("Grilled Chicken Breast") })
   ).halls;
 
-  expect(brunchOf(lenoir).stations[0].items[0]).toMatchObject({ recipeId: 13708, favorite: true });
-  expect(brunchOf(chase).stations[0].items[0]).toMatchObject({ recipeId: 20001, favorite: true });
+  expect(brunchOf(lenoir).favorites.map(({ item }) => item)).toMatchObject([{ recipeId: 13708, favorite: true }]);
+  expect(brunchOf(chase).favorites.map(({ item }) => item)).toMatchObject([{ recipeId: 20001, favorite: true }]);
   expect([lenoir.favoriteCount, chase.favoriteCount]).toEqual([1, 1]);
 });
 
@@ -143,6 +167,7 @@ test("a favorite hidden by a diet filter isn't shown or counted", async () => {
   ).halls;
 
   expect(layout(lenoir)).toEqual([["The Grill", ["Black Bean Burger Patty"]]]);
+  expect(favoritesGroup(lenoir)).toEqual([["The Grill", "Black Bean Burger Patty"]]);
   expect(lenoir.favoriteCount).toBe(1);
 });
 

@@ -1,5 +1,5 @@
 // UI smoke tests: the menu list shows calories and protein (and copes without
-// nutrition), and dietary tag badges on menu items.
+// nutrition), dietary tag badges on menu items, and favorites at the top of the list.
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import type { MenuItem } from "@/lib/today";
@@ -29,7 +29,15 @@ const renderGrill = (grillItems: GrillItem[], favoriteCount = 0) => {
         currentMealPeriod: "Brunch",
         selectedMealPeriod: "Brunch",
         favoriteCount,
-        mealPeriods: [{ name: "Brunch", start: "11:00", end: "15:00", stations: [{ name: "The Grill", items }] }],
+        mealPeriods: [
+          {
+            name: "Brunch",
+            start: "11:00",
+            end: "15:00",
+            favorites: items.filter((i) => i.favorite).map((item) => ({ station: "The Grill", item })),
+            stations: [{ name: "The Grill", items }],
+          },
+        ],
       }}
     />,
   );
@@ -82,4 +90,24 @@ test("favorites are highlighted, each item has a star toggle, and the hall shows
   const biscuit = html.slice(html.indexOf('data-recipe="15469"'));
   expect(biscuit).not.toContain("data-favorite");
   expect(biscuit).toContain("Star Nashville Hot Chicken Biscuit");
+});
+
+test("favorites are listed at the top of the hall's list with their station, above the stations", () => {
+  const html = renderGrill([
+    { name: "Nashville Hot Chicken Biscuit", recipeId: 15469, dietaryTags: [] },
+    { name: "Grilled Chicken Breast", recipeId: 13708, dietaryTags: [], favorite: true },
+  ]);
+
+  const top = html.slice(html.indexOf("Your favorites"), html.indexOf("<h4>The Grill</h4>"));
+  expect(top).toContain("Grilled Chicken Breast");
+  expect(top).toContain("The Grill");
+  expect(top).not.toContain("Nashville");
+  // Still in its station below too.
+  expect(html.slice(html.indexOf("<h4>The Grill</h4>"))).toContain("Grilled Chicken Breast");
+});
+
+test("with no favorites there's no favorites group", () => {
+  const html = renderGrill([{ name: "Nashville Hot Chicken Biscuit", recipeId: 15469, dietaryTags: [] }]);
+
+  expect(html).not.toContain("Your favorites");
 });

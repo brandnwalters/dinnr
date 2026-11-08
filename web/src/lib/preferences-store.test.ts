@@ -1,21 +1,8 @@
 // The on-device preferences store, against an in-memory stand-in for localStorage.
 import { expect, test } from "vitest";
 import { DEFAULT_PREFERENCES } from "./preferences";
+import { memoryStorage } from "../../test/memory-storage";
 import { createPreferencesStore, PREFERENCES_STORAGE_KEY } from "./preferences-store";
-
-function memoryStorage(initial: Record<string, string> = {}): Storage {
-  const data = new Map(Object.entries(initial));
-  return {
-    get length() {
-      return data.size;
-    },
-    clear: () => data.clear(),
-    getItem: (k) => data.get(k) ?? null,
-    key: (i) => [...data.keys()][i] ?? null,
-    removeItem: (k) => void data.delete(k),
-    setItem: (k, v) => void data.set(k, String(v)),
-  };
-}
 
 test("a device with nothing stored gets the defaults", () => {
   expect(createPreferencesStore(memoryStorage()).get()).toEqual(DEFAULT_PREFERENCES);
@@ -62,6 +49,11 @@ test("corrupt or unknown stored data falls back to defaults, field by field", ()
     [PREFERENCES_STORAGE_KEY]: JSON.stringify({ version: 999, dietFilters: ["vegan"] }),
   });
   expect(createPreferencesStore(fromTheFuture).get()).toEqual(DEFAULT_PREFERENCES);
+
+  const unknownOldVersion = memoryStorage({
+    [PREFERENCES_STORAGE_KEY]: JSON.stringify({ version: 0, dietFilters: ["vegan"] }),
+  });
+  expect(createPreferencesStore(unknownOldVersion).get()).toEqual(DEFAULT_PREFERENCES);
 });
 
 test("a device where storage throws (private mode, quota) still works for the session", () => {

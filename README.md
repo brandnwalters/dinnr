@@ -21,7 +21,8 @@ one phone-friendly page:
 - **Side by side, for the right meal.** The current meal period, or the next one when nothing is
   being served. Each hall shows its status ("Open now: Brunch until 3pm", "Dinner starts
   at 5pm", "Closed today") and the hours of each meal period, and you can switch to any other meal served today.
-- **Favorites first.** Star a dish and it's highlighted, wherever it's served. Dishes are matched by
+- **Favorites first.** Star a dish and it's listed under "Your favorites" at the top of each hall's menu, with
+  its station, and highlighted wherever it's served. Dishes are matched by
   normalized name, so "Grilled Chicken Breast" counts at any station in either hall. Each hall shows
   how many of your favorites it's serving.
 - **Strict filters.** Diet filters (vegan, vegetarian, halal, made without gluten, ...) and allergen
@@ -93,7 +94,8 @@ served?" feature will predict from.
 
 - **Today data layer** ([`web/src/lib/today.ts`](web/src/lib/today.ts)), server side: given a time
   and the user's preferences, it returns each hall's status, the current or next meal period with
-  hours, and stations and items with favorites first and filtered items removed. Diet and allergen
+  hours, the favorites served in each meal (listed first), and stations and items with filtered items
+  removed. Diet and allergen
   filters are applied in SQL. Preferences live in the browser and reach the server through a Server
   Function, which validates them again.
 - **Combo engine** ([`web/src/lib/combos.ts`](web/src/lib/combos.ts)), a pure TypeScript function
