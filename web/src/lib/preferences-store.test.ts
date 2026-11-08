@@ -49,6 +49,11 @@ test("corrupt or unknown stored data falls back to defaults, field by field", ()
     [PREFERENCES_STORAGE_KEY]: JSON.stringify({ version: 999, dietFilters: ["vegan"] }),
   });
   expect(createPreferencesStore(fromTheFuture).get()).toEqual(DEFAULT_PREFERENCES);
+
+  const unknownOldVersion = memoryStorage({
+    [PREFERENCES_STORAGE_KEY]: JSON.stringify({ version: 0, dietFilters: ["vegan"] }),
+  });
+  expect(createPreferencesStore(unknownOldVersion).get()).toEqual(DEFAULT_PREFERENCES);
 });
 
 test("a device where storage throws (private mode, quota) still works for the session", () => {

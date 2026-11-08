@@ -14,8 +14,10 @@ import { parseFavorites, type FavoriteDish } from "./favorites";
  *   3. add a parser to `FIELD_PARSERS` (return `undefined` for invalid input,
  *      which falls back to the default).
  * Stored data without the new field just gets the default, so adding a field
- * needs no version bump. Bump `PREFERENCES_VERSION` (and add a step to
- * `MIGRATIONS`) only when an existing field changes meaning or shape.
+ * needs no version bump. Bump `PREFERENCES_VERSION` only when an existing
+ * field changes meaning or shape, and then add a migration step from the old
+ * version in `parsePreferences` (stored data of any version it can't read
+ * falls back to the defaults).
  */
 
 export type Preferences = {
@@ -51,22 +53,15 @@ const FIELD_PARSERS: FieldParsers = {
   includeExcludedStations: (raw) => (typeof raw === "boolean" ? raw : undefined),
 };
 
-/** Upgrades stored data from version `v` to `v + 1`. Keyed by the version it upgrades from. */
-const MIGRATIONS: Record<number, (data: Record<string, unknown>) => Record<string, unknown>> = {};
-
 /** Any untrusted value (stored JSON, a request body) -> valid preferences, field by field. */
 export function parsePreferences(raw: unknown): Preferences {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return { ...DEFAULT_PREFERENCES };
-  let data = raw as Record<string, unknown>;
+  const data = raw as Record<string, unknown>;
 
-  let version = typeof data.version === "number" ? data.version : PREFERENCES_VERSION;
-  if (version > PREFERENCES_VERSION) return { ...DEFAULT_PREFERENCES }; // from a newer app: don't guess
-  while (version < PREFERENCES_VERSION) {
-    const migrate = MIGRATIONS[version];
-    if (!migrate) return { ...DEFAULT_PREFERENCES };
-    data = migrate(data);
-    version++;
-  }
+  // Unversioned data (e.g. a request body) is read as current. Any other version, older or
+  // from a newer app, is one we can't read: don't guess.
+  const version = typeof data.version === "number" ? data.version : PREFERENCES_VERSION;
+  if (version !== PREFERENCES_VERSION) return { ...DEFAULT_PREFERENCES };
 
   const prefs = { ...DEFAULT_PREFERENCES };
   for (const key of Object.keys(FIELD_PARSERS) as (keyof Preferences)[]) {
