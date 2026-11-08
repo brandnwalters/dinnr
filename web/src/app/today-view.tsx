@@ -2,6 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { toggleFavorite } from "@/lib/favorites";
 import { usePreferences } from "@/lib/preferences-store";
 import type { TodayMenu } from "@/lib/today";
 import { loadToday } from "./actions";
@@ -35,6 +37,9 @@ export function TodayView() {
   if (!preferences) return <p>Loading today&apos;s menus…</p>;
   return (
     <>
+      <p>
+        <Link href="/favorites">My favorites ({preferences.favorites.length})</Link>
+      </p>
       <DietFilters
         selected={preferences.dietFilters}
         onChange={(dietFilters) => updatePreferences((p) => ({ ...p, dietFilters }))}
@@ -45,7 +50,13 @@ export function TodayView() {
         // One column per hall on desktop, stacked on narrow screens (page.module.css).
         <div className={styles.halls}>
           {today.halls.map((hall) => (
-            <HallMenu key={hall.slug} hall={hall} />
+            <HallMenu
+              key={hall.slug}
+              hall={hall}
+              onToggleFavorite={(item) =>
+                updatePreferences((p) => ({ ...p, favorites: toggleFavorite(p.favorites, item) }))
+              }
+            />
           ))}
         </div>
       )}
