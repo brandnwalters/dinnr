@@ -63,7 +63,7 @@ test("each item shows its calories and protein; items without nutrition still re
 
 /** The markup of the station row for `recipeId`, up to the next dish's row. */
 function row(html: string, recipeId: number): string {
-  const station = html.slice(html.indexOf("<h4>The Grill</h4>"));
+  const station = html.slice(html.indexOf(">The Grill</h4>"));
   const start = station.indexOf(`data-recipe="${recipeId}"`);
   const end = station.indexOf("data-recipe=", start + 1);
   return station.slice(start, end === -1 ? undefined : end);
