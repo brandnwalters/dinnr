@@ -60,12 +60,12 @@ green. (Scheduled runs only fire for the workflow on the default branch, so merg
 
 1. At <https://vercel.com/new>, import `brandnwalters/dinnr`.
 2. **Root Directory**: `web`. Framework preset: Next.js (auto-detected). Leave build and install
-   commands at their defaults.
+   commands at their defaults: `web/vercel.json` overrides them to run pnpm 12.18.0 via `npx`.
+   Vercel's own pnpm detection can't read the pnpm 12 lockfile, and its corepack support didn't
+   pick up `packageManager`. `engines.node` in `web/package.json` pins Node 24.
 3. **Environment Variables** (Production, and Preview if you want previews to work):
    - `DATABASE_URL` = the Neon **pooled** connection string (skip if the Marketplace integration
      already set it).
-   - `ENABLE_EXPERIMENTAL_COREPACK` = `1`, so Vercel installs with the pnpm version pinned in
-     `web/package.json` (`packageManager`) instead of guessing from the lockfile.
 4. Deploy. Pushes to `main` then deploy to production automatically.
 
 ### 5. Check it
