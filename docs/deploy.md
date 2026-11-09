@@ -33,6 +33,10 @@ These steps need accounts and credentials, so they are done by hand.
    Both look like `postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require&channel_binding=require`.
    Keep `sslmode=require`.
 
+Alternative: the Neon CLI. In `web/`, `neon init` links the project (`web/neon.ts` holds the branch
+policy; the `web/.neon` link file is gitignored) and `neon env pull` writes `DATABASE_URL` (pooled)
+and `DATABASE_URL_UNPOOLED` (direct) to `web/.env.local`.
+
 Alternative: install Neon from the Vercel Marketplace (Vercel project → Storage → Neon). It creates
 the database and sets `DATABASE_URL` (pooled) on the Vercel project for you. You still copy the
 direct string for step 2.
@@ -67,7 +71,7 @@ green. (Scheduled runs only fire for the workflow on the default branch, so merg
 ### 5. Check it
 
 Open the production URL (e.g. `https://dinnr.vercel.app`). It should show today's Lenoir menu from
-Neon. If the page is empty, check the latest **scrape** run succeeded today.
+Neon. `/api/health` round-trips to the database and returns `{"ok":true,"migrations":N}`. If the page is empty, check the latest **scrape** run succeeded today.
 
 ## Operating notes
 
