@@ -6,9 +6,8 @@ import { AppNav } from "./app-nav";
 /** The opening tag of the element whose text is `label`, e.g. `<a href="/me" aria-current="page" ...>`. */
 function tabTag(html: string, label: string): string {
   const end = html.indexOf(`>${label}<`);
-  const tags = html.slice(0, end).match(/<(a|span)\b[^>]*>/g) ?? [];
-  // The label sits in its own span inside the tab: the tab is the last <a> or role="link" span before it.
-  return tags.filter((tag) => tag.startsWith("<a") || tag.includes('role="link"')).at(-1) ?? "";
+  // The label sits in its own span inside the tab: the tab is the last <a> before it.
+  return html.slice(0, end).match(/<a\b[^>]*>/g)?.at(-1) ?? "";
 }
 
 test("lists Today, Menus, Combos and Me", () => {
@@ -38,12 +37,11 @@ test("Menus links to /menus and is current there", () => {
   expect(html.match(/aria-current/g)).toHaveLength(1);
 });
 
-test("Combos is disabled: no link, announced as unavailable", () => {
-  const html = renderToStaticMarkup(<AppNav pathname="/" />);
-  const tag = tabTag(html, "Combos");
-  expect(tag).toContain('aria-disabled="true"');
-  expect(tag).not.toContain("href");
-  expect(html).toContain("coming soon");
+test("Combos links to /combos and is current there", () => {
+  const html = renderToStaticMarkup(<AppNav pathname="/combos" />);
+  expect(tabTag(html, "Combos")).toContain('href="/combos"');
+  expect(tabTag(html, "Combos")).toContain('aria-current="page"');
+  expect(html.match(/aria-current/g)).toHaveLength(1);
 });
 
 test("the navigation is labelled", () => {
