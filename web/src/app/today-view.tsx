@@ -5,7 +5,6 @@ import { toggleFavorite } from "@/lib/favorites";
 import { withSelectedMeal } from "@/lib/meal-periods";
 import { usePreferences } from "@/lib/preferences-store";
 import { HallMenu } from "./hall-menu";
-import { MacroCombos } from "./macro-combos";
 import { MenuSkeleton } from "./menu-skeleton";
 import { useTodayMenu } from "./today-menu-provider";
 
@@ -26,29 +25,16 @@ export function TodayView() {
   if (!preferences || !halls) return <MenuSkeleton />;
   return (
     // One column per hall from tablet width up, stacked on narrow screens.
-    <>
-      <div className="mt-4 grid grid-cols-1 gap-6 md:grid-flow-col md:auto-cols-fr md:grid-cols-none">
-        {halls.map((hall) => (
-          <HallMenu
-            key={hall.slug}
-            hall={hall}
-            onToggleFavorite={(item) =>
-              updatePreferences((p) => ({ ...p, favorites: toggleFavorite(p.favorites, item) }))
-            }
-          />
-        ))}
-      </div>
-      <MacroCombos
-        halls={halls}
-        targets={preferences.macroTargets}
-        onTargetsChange={(macroTargets) => updatePreferences((p) => ({ ...p, macroTargets }))}
-        includeExcludedStations={preferences.includeExcludedStations}
-        onIncludeExcludedStationsChange={(includeExcludedStations) =>
-          updatePreferences((p) => ({ ...p, includeExcludedStations }))
-        }
-        dietFilters={preferences.dietFilters}
-        allergens={preferences.allergens}
-      />
-    </>
+    <div className="mt-4 grid grid-cols-1 gap-6 md:grid-flow-col md:auto-cols-fr md:grid-cols-none">
+      {halls.map((hall) => (
+        <HallMenu
+          key={hall.slug}
+          hall={hall}
+          onToggleFavorite={(item) =>
+            updatePreferences((p) => ({ ...p, favorites: toggleFavorite(p.favorites, item) }))
+          }
+        />
+      ))}
+    </div>
   );
 }

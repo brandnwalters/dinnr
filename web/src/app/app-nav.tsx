@@ -2,13 +2,13 @@ import { CalendarDays, Layers, User, UtensilsCrossed, type LucideIcon } from "lu
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-/** One tab. Tabs without an `href` aren't built yet: shown, but disabled. */
-type Tab = { label: string; href?: string; icon: LucideIcon };
+/** One tab: its label, route and icon. */
+type Tab = { label: string; href: string; icon: LucideIcon };
 
 const TABS: readonly Tab[] = [
   { label: "Today", href: "/", icon: CalendarDays },
   { label: "Menus", href: "/menus", icon: UtensilsCrossed },
-  { label: "Combos", icon: Layers },
+  { label: "Combos", href: "/combos", icon: Layers },
   { label: "Me", href: "/me", icon: User },
 ];
 
@@ -44,14 +44,6 @@ function TabLink({ tab, current }: { tab: Tab; current: boolean }) {
       <span>{tab.label}</span>
     </>
   );
-  if (!tab.href) {
-    return (
-      <span role="link" aria-disabled="true" className={cn(tabClass, "text-muted-foreground opacity-50")}>
-        {content}
-        <span className="sr-only"> (coming soon)</span>
-      </span>
-    );
-  }
   return (
     <Link
       href={tab.href}
