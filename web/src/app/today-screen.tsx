@@ -1,5 +1,7 @@
 import { mealPeriodNames, selectedMealPeriod } from "@/lib/meal-periods";
 import type { Hall } from "@/lib/today";
+import { cn } from "@/lib/utils";
+import { HALL_GRID_CLASS } from "./hall-columns";
 import { HallCard } from "./hall-card";
 import { MealPeriodSwitcher } from "./meal-period-switcher";
 
@@ -31,7 +33,7 @@ export function TodayScreen({
   return (
     <div className="flex flex-col gap-4">
       <MealPeriodSwitcher mealPeriods={mealPeriodNames(halls)} selected={meal} query={links} />
-      <div className="grid grid-cols-1 gap-4 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none">
+      <div className={cn(HALL_GRID_CLASS, "gap-4")}>
         {halls.map((hall) => (
           <HallCard
             key={hall.slug}

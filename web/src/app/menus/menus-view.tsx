@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { toggleFavorite } from "@/lib/favorites";
 import { clearFilters } from "@/lib/preferences";
 import { usePreferences } from "@/lib/preferences-store";
+import { hallQuery } from "../hall-columns";
 import { MenuSkeleton } from "../menu-skeleton";
 import { useTodayMenu } from "../today-menu-provider";
 import { MenusScreen } from "./menus-screen";
@@ -22,7 +23,7 @@ export function MenusView() {
   return (
     <MenusScreen
       halls={menu.halls}
-      query={{ meal: searchParams.get("meal") ?? undefined, hall: searchParams.get("hall") ?? undefined }}
+      query={hallQuery(searchParams)}
       onToggleFavorite={(item) => updatePreferences((p) => ({ ...p, favorites: toggleFavorite(p.favorites, item) }))}
       onClearFilters={() => updatePreferences(clearFilters)}
     />

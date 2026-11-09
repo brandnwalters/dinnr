@@ -4,7 +4,8 @@ import { expect, test } from "vitest";
 import type { Allergen } from "@/lib/allergens";
 import type { MacroTargets } from "@/lib/combos";
 import type { Hall, MenuItem } from "@/lib/today";
-import { CombosScreen, type CombosQuery } from "./combos-screen";
+import type { HallQuery } from "../hall-columns";
+import { CombosScreen } from "./combos-screen";
 
 const food = (name: string, recipeId: number, calories: number, proteinG: number): MenuItem => ({
   name,
@@ -45,14 +46,13 @@ const HALLS = [
 
 const render = (
   targets: MacroTargets,
-  { includeExcludedStations = false, allergens = [] as Allergen[], query = {} as CombosQuery, halls = HALLS } = {},
+  { includeExcludedStations = false, allergens = [] as Allergen[], query = {} as HallQuery, halls = HALLS } = {},
 ) =>
   renderToStaticMarkup(
     <CombosScreen
       halls={halls}
       query={query}
-      dietFilters={[]}
-      allergens={allergens}
+      filters={{ dietFilters: [], allergens }}
       targets={targets}
       onTargetsChange={() => {}}
       includeExcludedStations={includeExcludedStations}

@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { menusHref } from "@/lib/menus-link";
 import { stationPreview } from "@/lib/station-preview";
 import type { Hall, MealPeriod } from "@/lib/today";
-import { hours, StatusPill } from "./hall-menu";
+import { HallMenuHeader, MealPeriodHeading } from "./hall-menu";
 import { NotServing } from "./meal-period-switcher";
-import { ClosedToday, NoMatchingItems, NoMenuYet } from "./menu-empty-states";
+import { allDayEmptyState, NoMatchingItems } from "./menu-empty-states";
 
 /**
  * "Your favorites here": the user's favorites in this meal period, each with
@@ -96,10 +96,7 @@ export function HallCard({
     <section aria-labelledby={headingId}>
       <Card className="h-full gap-3">
         <CardHeader>
-          <h2 id={headingId} className="text-lg font-semibold">
-            {hall.name}
-          </h2>
-          <StatusPill hall={hall} />
+          <HallMenuHeader hall={hall} headingId={headingId} />
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <HallCardBody hall={hall} meal={meal} hasFavorites={hasFavorites} onClearFilters={onClearFilters} />
@@ -121,16 +118,13 @@ function HallCardBody({
   hasFavorites: boolean;
   onClearFilters?: () => void;
 }) {
-  if (hall.status === "no-menu") return <NoMenuYet />;
-  if (hall.status === "closed-today") return <ClosedToday />;
+  const allDay = allDayEmptyState(hall);
+  if (allDay) return allDay;
   const mealPeriod = hall.mealPeriods.find((mp) => mp.name === meal);
   if (!mealPeriod) return meal && <NotServing mealPeriod={meal} />;
   return (
     <>
-      <h3 className="text-sm font-medium">
-        {mealPeriod.name}
-        {hours(mealPeriod) && ` · ${hours(mealPeriod)}`}
-      </h3>
+      <MealPeriodHeading mealPeriod={mealPeriod} />
       {mealPeriod.stations.length === 0 ? (
         <NoMatchingItems onClearFilters={onClearFilters} />
       ) : (

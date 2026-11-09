@@ -1,17 +1,34 @@
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import type { Hall } from "@/lib/today";
+import type { Hall, HallStatus } from "@/lib/today";
 
 /**
- * The friendly, centered messages a hall's menu shows instead of dishes:
+ * The friendly, centered messages shown where dishes or combos would be:
  * filters hid everything (with a one-tap way back), the hall is closed all
  * day, or no menu has been posted for today yet. Presentational.
  */
 
-function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
+/**
+ * One centered empty state: an optional icon, a short title, the explanation
+ * and, as `children`, an optional way out (such as a button).
+ */
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon?: LucideIcon;
+  title: string;
+  description: string;
+  children?: ReactNode;
+}) {
   return (
     <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+      {Icon && <Icon aria-hidden className="size-6 text-muted-foreground" />}
       <p className="font-medium">{title}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
       {children}
     </div>
   );
@@ -23,8 +40,7 @@ function EmptyState({ title, children }: { title: string; children?: ReactNode }
  */
 export function NoMatchingItems({ onClearFilters }: { onClearFilters?: () => void }) {
   return (
-    <EmptyState title="No items match your filters">
-      <p className="text-sm text-muted-foreground">Your diet and allergen filters hide every dish here.</p>
+    <EmptyState title="No items match your filters" description="Your diet and allergen filters hide every dish here.">
       {onClearFilters && (
         <Button variant="outline" className="mt-2 min-h-tap px-4" onClick={onClearFilters}>
           Clear filters
@@ -36,28 +52,26 @@ export function NoMatchingItems({ onClearFilters }: { onClearFilters?: () => voi
 
 /** UNC Dining lists the hall as closed all day today. */
 export function ClosedToday() {
-  return (
-    <EmptyState title="Closed all day">
-      <p className="text-sm text-muted-foreground">This hall isn&apos;t serving today. Try the other one.</p>
-    </EmptyState>
-  );
-}
-
-/**
- * What a hall with nothing to show all day says instead of a meal period:
- * `ClosedToday` or `NoMenuYet`, or null for a hall with menus today.
- */
-export function AllDayEmptyState({ hall }: { hall: Hall }) {
-  if (hall.status === "closed-today") return <ClosedToday />;
-  if (hall.status === "no-menu") return <NoMenuYet />;
-  return null;
+  return <EmptyState title="Closed all day" description="This hall isn't serving today. Try the other one." />;
 }
 
 /** No menu has been scraped for this hall today. */
 export function NoMenuYet() {
-  return (
-    <EmptyState title="Nothing posted yet">
-      <p className="text-sm text-muted-foreground">UNC Dining hasn&apos;t posted today&apos;s menu. Check back later.</p>
-    </EmptyState>
-  );
+  return <EmptyState title="Nothing posted yet" description="UNC Dining hasn't posted today's menu. Check back later." />;
+}
+
+/** The statuses with nothing to show all day, and what each shows instead of a meal period. */
+const ALL_DAY_EMPTY_STATES: Partial<Record<HallStatus, () => ReactNode>> = {
+  "closed-today": ClosedToday,
+  "no-menu": NoMenuYet,
+};
+
+/**
+ * What a hall with nothing to show all day (closed, or no menu yet) says
+ * instead of a meal period, or null for a hall with menus today. A function
+ * rather than a component so callers can fall back with `??`.
+ */
+export function allDayEmptyState(hall: Hall): ReactNode | null {
+  const State = ALL_DAY_EMPTY_STATES[hall.status];
+  return State ? <State /> : null;
 }

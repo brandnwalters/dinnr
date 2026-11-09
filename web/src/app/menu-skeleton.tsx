@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { HALL_GRID_CLASS } from "./hall-columns";
 
 /** One gray placeholder block. */
 export function Bone({ className }: { className?: string }) {
@@ -15,7 +16,7 @@ export function MenuSkeleton({ columns = 2 }: { columns?: number }) {
     <div role="status" className="flex flex-col gap-4">
       <span className="sr-only">Loading today&apos;s menus</span>
       <Bone className="h-tap w-full" />
-      <div aria-hidden className="grid grid-cols-1 gap-6 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none">
+      <div aria-hidden className={HALL_GRID_CLASS}>
         {Array.from({ length: columns }, (_, column) => (
           <div key={column} className={cn("flex flex-col gap-3", column > 0 && "hidden lg:flex")}>
             <Bone className="h-6 w-1/2" />
