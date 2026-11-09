@@ -130,18 +130,3 @@
   font-size: var(--text-xs);
   opacity: 0.8;
 }
-
-.checkbox-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: --spacing(1) --spacing(4);
-  margin: --spacing(4) 0;
-  padding: --spacing(2);
-}
-
-.allergen-disclaimer {
-  margin: --spacing(2) 0 --spacing(4);
-  padding: --spacing(2) --spacing(3);
-  border-left: 4px solid var(--warning);
-  background: color-mix(in oklch, var(--warning) 10%, transparent);
-}

@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CurrentAppNav } from "./current-app-nav";
+import { AllergenBanner, FilterSheet } from "./filter-sheet";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -15,7 +16,8 @@ export const metadata: Metadata = {
 /**
  * The app shell around every screen: a header with the "Dinnr" wordmark and
  * the main navigation (a bottom tab bar on phones, in the header from tablet
- * width up). The main area leaves room for the fixed tab bar on phones.
+ * width up) and the filter button, plus the allergen disclaimer banner while an
+ * allergen filter is on. The main area leaves room for the fixed tab bar on phones.
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -26,8 +28,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="text-xl font-bold tracking-tight">
               Dinnr
             </Link>
-            <CurrentAppNav />
+            <div className="flex items-center gap-2">
+              <CurrentAppNav />
+              <FilterSheet />
+            </div>
           </div>
+          <AllergenBanner />
         </header>
         <main className="mx-auto w-full max-w-6xl px-4 pt-4 pb-[calc(var(--spacing-tab-bar)+var(--spacing)*4)] md:pb-8">
           {children}
