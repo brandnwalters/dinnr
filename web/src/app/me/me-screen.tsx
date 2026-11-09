@@ -1,18 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FavoriteDish } from "@/lib/favorites";
+import type { Theme } from "@/lib/preferences";
+import { AppearanceSetting } from "./appearance-setting";
 import { FavoritesList } from "./favorites-list";
 
 /**
- * The Me screen: the user's favorites (each can be unstarred) and an About
- * section. Presentational, so it renders to static markup in tests; `MeView`
- * wires it to the on-device preferences.
+ * The Me screen: the user's favorites (each can be unstarred), the
+ * Appearance setting and an About section. Presentational, so it renders to
+ * static markup in tests; `MeView` wires it to the on-device preferences.
  */
 export function MeScreen({
   favorites,
   onRemoveFavorite,
+  theme,
+  onThemeChange,
 }: {
   favorites: FavoriteDish[];
   onRemoveFavorite?: (normalizedName: string) => void;
+  theme: Theme;
+  onThemeChange?: (theme: Theme) => void;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -27,6 +33,16 @@ export function MeScreen({
             A favorite matches the dish by name at any station or hall.
           </p>
           <FavoritesList favorites={favorites} onRemove={onRemoveFavorite} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>Appearance</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AppearanceSetting theme={theme} onChange={onThemeChange} />
         </CardContent>
       </Card>
       <About />

@@ -31,9 +31,25 @@ export type Preferences = {
   favorites: FavoriteDish[];
   /** Macro combos: let items from condiment-type stations (flagged by the scraper) into combos. */
   includeExcludedStations: boolean;
+  /** Appearance: follow the phone's light/dark setting, or force one. */
+  theme: Theme;
 };
 
+/** The Appearance choices, in the order the Me tab shows them. */
+export const THEMES = ["system", "light", "dark"] as const;
+export type Theme = (typeof THEMES)[number];
+
+export function isTheme(value: unknown): value is Theme {
+  return (THEMES as readonly unknown[]).includes(value);
+}
+
 export const PREFERENCES_VERSION = 1;
+
+/**
+ * The localStorage key the store (`preferences-store.ts`) saves under. Defined
+ * here, free of React, so the pre-paint theme script (`theme.ts`) can read it too.
+ */
+export const PREFERENCES_STORAGE_KEY = "dinnr:preferences";
 
 export const DEFAULT_PREFERENCES: Preferences = {
   dietFilters: [],
@@ -41,6 +57,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   macroTargets: {},
   favorites: [],
   includeExcludedStations: false,
+  theme: "system",
 };
 
 type FieldParsers = { [K in keyof Preferences]: (raw: unknown) => Preferences[K] | undefined };
@@ -51,6 +68,7 @@ const FIELD_PARSERS: FieldParsers = {
   macroTargets: parseMacroTargets,
   favorites: parseFavorites,
   includeExcludedStations: (raw) => (typeof raw === "boolean" ? raw : undefined),
+  theme: (raw) => (isTheme(raw) ? raw : undefined),
 };
 
 /** Any untrusted value (stored JSON, a request body) -> valid preferences, field by field. */

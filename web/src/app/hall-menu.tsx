@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { DietaryTagBadges } from "./dietary-tag-badges";
 import { FavoriteButton, FavoriteCount } from "./favorite-button";
-import { NutritionButton } from "./nutrition-panel";
+import { NutritionSheet } from "./nutrition-sheet";
 import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
 
 /** "140 cal · 25 g protein", leaving out whatever the label doesn't give. */
@@ -66,7 +66,7 @@ function ItemRow({
   return (
     <li data-recipe={item.recipeId} data-favorite={item.favorite ? "true" : undefined}>
       <FavoriteButton item={item} onToggle={onToggleFavorite} />{" "}
-      <NutritionButton recipeId={item.recipeId} name={item.name} />
+      <NutritionSheet item={item} onToggleFavorite={onToggleFavorite} />
       {children}
       <DietaryTagBadges tags={item.dietaryTags} />
       <MacroSummary item={item} />

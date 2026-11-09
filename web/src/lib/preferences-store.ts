@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { parsePreferences, serializePreferences, type Preferences } from "./preferences";
+import { parsePreferences, PREFERENCES_STORAGE_KEY, serializePreferences, type Preferences } from "./preferences";
 
 /**
  * The on-device preferences store: one JSON value in localStorage, no account.
@@ -7,7 +7,7 @@ import { parsePreferences, serializePreferences, type Preferences } from "./pref
  * `preferences.ts` (add new fields there, not here).
  */
 
-export const PREFERENCES_STORAGE_KEY = "dinnr:preferences";
+export { PREFERENCES_STORAGE_KEY };
 
 export type PreferencesStore = {
   get(): Preferences;
