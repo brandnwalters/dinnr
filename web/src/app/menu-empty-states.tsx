@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 
 /**
  * The friendly, centered messages a hall's menu shows instead of dishes:
- * filters hid everything (with a one-tap way back), or no menu has been
- * posted for today yet. Presentational.
+ * filters hid everything (with a one-tap way back), the hall is closed all
+ * day, or no menu has been posted for today yet. Presentational.
  */
 
 function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
@@ -29,6 +29,15 @@ export function NoMatchingItems({ onClearFilters }: { onClearFilters?: () => voi
           Clear filters
         </Button>
       )}
+    </EmptyState>
+  );
+}
+
+/** UNC Dining lists the hall as closed all day today. */
+export function ClosedToday() {
+  return (
+    <EmptyState title="Closed all day">
+      <p className="text-sm text-muted-foreground">This hall isn&apos;t serving today. Try the other one.</p>
     </EmptyState>
   );
 }

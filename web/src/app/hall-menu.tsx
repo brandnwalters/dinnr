@@ -35,7 +35,8 @@ function clock(hhmm: string): string {
   return `${hour12}${m === 0 ? "" : `:${String(m).padStart(2, "0")}`}${h < 12 ? "am" : "pm"}`;
 }
 
-function hours(mealPeriod: MealPeriod): string | null {
+/** A meal period's hours, e.g. "11am–2:30pm", or null without readable times. */
+export function hours(mealPeriod: MealPeriod): string | null {
   return mealPeriod.start && mealPeriod.end ? `${clock(mealPeriod.start)}–${clock(mealPeriod.end)}` : null;
 }
 
@@ -49,7 +50,8 @@ export function HallMenuHeader({ hall, headingId }: { hall: Hall; headingId: str
   );
 }
 
-function statusText(hall: Hall): string {
+/** The hall's status line, e.g. "Open now: Lunch until 2:30pm" or "Closed today". */
+export function statusText(hall: Hall): string {
   const current = hall.mealPeriods.find((mp) => mp.name === hall.currentMealPeriod);
   switch (hall.status) {
     case "serving":
