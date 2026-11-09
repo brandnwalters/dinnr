@@ -2,7 +2,6 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { ALLERGENS } from "@/lib/allergens";
 import { DIETARY_TAGS } from "@/lib/dietary-tags";
 import { toggleFavorite } from "@/lib/favorites";
@@ -14,7 +13,6 @@ import { AllergenDisclaimer } from "./allergen-disclaimer";
 import { CheckboxFilters } from "./checkbox-filters";
 import { HallMenu } from "./hall-menu";
 import { MacroCombos } from "./macro-combos";
-import styles from "./page.module.css";
 
 /**
  * The home page body. Preferences live on the device, so the menus are loaded
@@ -45,9 +43,6 @@ export function TodayView() {
   if (!preferences) return <p>Loading today&apos;s menus…</p>;
   return (
     <>
-      <p>
-        <Link href="/favorites">My favorites ({preferences.favorites.length})</Link>
-      </p>
       {/* Strict cutoffs: an item must carry every checked diet tag, and none of the checked allergens. */}
       <CheckboxFilters
         legend="Only show items that are"
@@ -67,9 +62,9 @@ export function TodayView() {
       {today === null ? (
         <p>Loading today&apos;s menus…</p>
       ) : (
-        // One column per hall on desktop, stacked on narrow screens (page.module.css).
+        // One column per hall from tablet width up, stacked on narrow screens.
         <>
-          <div className={styles.halls}>
+          <div className="mt-4 grid grid-cols-1 gap-6 md:grid-flow-col md:auto-cols-fr md:grid-cols-none">
             {today.halls.map((hall) => (
               <HallMenu
                 key={hall.slug}
