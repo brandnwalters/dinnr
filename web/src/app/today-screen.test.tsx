@@ -1,0 +1,186 @@
+// UI smoke tests: Today's head-to-head hall cards (status pill, hours, favorites, condensed preview, deep links).
+import { renderToStaticMarkup } from "react-dom/server";
+import { expect, test } from "vitest";
+import type { Hall, HallStatus, MealPeriod, MenuItem } from "@/lib/today";
+import { TodayScreen } from "./today-screen";
+
+const item = (name: string, recipeId: number, favorite = false): MenuItem => ({
+  name,
+  recipeId,
+  normalizedName: name.toLowerCase(),
+  favorite,
+  dietaryTags: [],
+  allergens: [],
+});
+
+const meal = (name: string, start: string, end: string, stations: MealPeriod["stations"]): MealPeriod => ({
+  name,
+  start,
+  end,
+  stations,
+  favorites: stations.flatMap((s) => s.items.filter((i) => i.favorite).map((i) => ({ station: s.name, item: i }))),
+});
+
+const lenoir: Hall = {
+  slug: "top-of-lenoir",
+  name: "Top of Lenoir",
+  status: "serving",
+  currentMealPeriod: "Brunch",
+  selectedMealPeriod: "Brunch",
+  favoriteCount: 1,
+  mealPeriods: [
+    meal("Brunch", "10:30", "15:00", [
+      {
+        name: "The Grill",
+        items: [
+          item("Buttermilk Pancake", 1),
+          item("Scrambled Eggs", 2),
+          item("Bacon", 3),
+          item("Hash Browns", 4),
+          item("Grits", 5),
+        ],
+      },
+      { name: "Simply Prepared & Grill", items: [item("Grilled Chicken Breast", 6, true), item("Rice", 7)] },
+    ]),
+    meal("Dinner", "17:00", "20:00", [{ name: "The Grill", items: [item("Cheeseburger", 8)] }]),
+  ],
+};
+
+const chase: Hall = {
+  slug: "chase",
+  name: "Chase",
+  status: "opens-later",
+  currentMealPeriod: "Late Lunch",
+  selectedMealPeriod: "Late Lunch",
+  favoriteCount: 0,
+  mealPeriods: [
+    meal("Late Lunch", "14:00", "16:30", [{ name: "Deli", items: [item("Turkey Club", 9)] }]),
+    meal("Dinner", "17:00", "21:00", [{ name: "Wok", items: [item("Lo Mein", 10)] }]),
+  ],
+};
+
+const render = (halls: Hall[] = [lenoir, chase], query: { meal?: string } = {}, hasFavorites = true) =>
+  renderToStaticMarkup(<TodayScreen halls={halls} query={query} hasFavorites={hasFavorites} />);
+
+/** One hall's card: from its heading to the next card's heading. */
+function card(html: string, hall: string): string {
+  const start = html.indexOf(`>${hall}</h2>`);
+  const end = html.indexOf("</h2>", start + hall.length + 6);
+  return html.slice(start, end === -1 ? undefined : end);
+}
+
+/** The opening `<a>` tag of the link whose text is `text`. */
+function linkTag(html: string, text: string): string {
+  return html.slice(0, html.indexOf(`>${text}<`) + 1).match(/<a\b[^>]*>/g)?.at(-1) ?? "";
+}
+
+const withStatus = (status: HallStatus, current: string | null = null): Hall => ({
+  ...chase,
+  status,
+  currentMealPeriod: current,
+});
+
+test("the status pill keeps today's wording for every hall status", () => {
+  const cases: [Hall, string][] = [
+    [lenoir, "Open now: Brunch until 3pm"],
+    [chase, "Late Lunch starts at 2pm"],
+    [withStatus("done-for-today"), "Closed for the rest of today"],
+    [{ ...withStatus("closed-today"), mealPeriods: [] }, "Closed today"],
+    [{ ...withStatus("no-menu"), mealPeriods: [] }, "No menu for today yet"],
+  ];
+  for (const [hall, wording] of cases) expect(card(render([hall]), hall.name)).toContain(wording);
+});
+
+test("one shared meal-period switcher drives every card, which shows that meal period's hours", () => {
+  const html = render();
+  expect(html.match(/aria-label="Meal period"/g)).toHaveLength(1);
+  expect(card(html, "Top of Lenoir")).toContain("Brunch · 10:30am–3pm");
+  const dinner = render([lenoir, chase], { meal: "Dinner" });
+  expect(card(dinner, "Top of Lenoir")).toContain("Dinner · 5pm–8pm");
+  expect(card(dinner, "Chase")).toContain("Dinner · 5pm–9pm");
+  expect(card(dinner, "Top of Lenoir")).not.toContain("Pancake");
+});
+
+test("a hall that doesn't serve the selected meal period says so", () => {
+  const html = render([lenoir, chase], { meal: "Late Lunch" });
+  expect(card(html, "Top of Lenoir")).toContain("Not serving Late Lunch");
+  expect(card(html, "Top of Lenoir")).not.toContain("See full menu");
+  expect(card(html, "Chase")).not.toContain("Not serving");
+  expect(card(html, "Chase")).toContain("Late Lunch · 2pm–4:30pm");
+});
+
+test("each card lists the user's favorites served there, each with its station", () => {
+  const html = render();
+  const lenoirCard = card(html, "Top of Lenoir");
+  const favorites = lenoirCard.slice(lenoirCard.indexOf("Your favorites here"));
+  expect(lenoirCard).toContain("Your favorites here");
+  expect(favorites).toMatch(/Grilled Chicken Breast.*Simply Prepared &amp; Grill/);
+  expect(card(html, "Chase")).not.toContain("Your favorites here");
+  expect(html).not.toContain("Star dishes");
+});
+
+test("a student with no favorites gets a hint to star dishes instead", () => {
+  const unstarred = (hall: Hall): Hall => ({
+    ...hall,
+    favoriteCount: 0,
+    mealPeriods: hall.mealPeriods.map((mp) => ({ ...mp, favorites: [] })),
+  });
+  const html = render([unstarred(lenoir), unstarred(chase)], { meal: "Dinner" }, false);
+  expect(card(html, "Top of Lenoir")).toContain("Star dishes");
+  expect(card(html, "Chase")).toContain("Star dishes");
+  expect(html).not.toContain("Your favorites here");
+});
+
+test("each card previews one line per station: its first dishes and how many more", () => {
+  const lenoirCard = card(render(), "Top of Lenoir");
+  expect(lenoirCard).toMatch(/The Grill.*Buttermilk Pancake, Scrambled Eggs, Bacon.*\+2 more/);
+  expect(lenoirCard).not.toContain("Hash Browns");
+  const short = lenoirCard.slice(lenoirCard.lastIndexOf(">Simply Prepared &amp; Grill<"));
+  expect(short).toMatch(/Grilled Chicken Breast, Rice/);
+  expect(short).not.toContain("more");
+});
+
+test("each station deep-links into Menus at that station, for that hall and meal period", () => {
+  const html = render([lenoir, chase], { meal: "Dinner" });
+  expect(linkTag(card(html, "Chase"), "Wok")).toContain('href="/menus?hall=chase&amp;meal=Dinner#station-chase-wok"');
+  const brunch = render();
+  expect(linkTag(card(brunch, "Top of Lenoir"), "Simply Prepared &amp; Grill")).toContain(
+    'href="/menus?hall=top-of-lenoir&amp;meal=Brunch#station-top-of-lenoir-simply-prepared-grill"',
+  );
+});
+
+test("See full menu opens Menus for that hall and meal period", () => {
+  const html = render([lenoir, chase], { meal: "Dinner" });
+  expect(linkTag(card(html, "Top of Lenoir"), "See full menu")).toContain(
+    'href="/menus?hall=top-of-lenoir&amp;meal=Dinner"',
+  );
+  expect(linkTag(card(html, "Chase"), "See full menu")).toContain('href="/menus?hall=chase&amp;meal=Dinner"');
+});
+
+test("a hall closed all day or with no menu yet gets a friendly state instead of a preview", () => {
+  const closed: Hall = { ...withStatus("closed-today"), mealPeriods: [] };
+  const closedCard = card(render([lenoir, closed]), "Chase");
+  expect(closedCard).toContain("Closed all day");
+  expect(closedCard).not.toContain("Not serving");
+  expect(closedCard).not.toContain("See full menu");
+
+  const noMenu: Hall = { ...withStatus("no-menu"), mealPeriods: [] };
+  const noMenuCard = card(render([lenoir, noMenu]), "Chase");
+  expect(noMenuCard).toContain("Check back later");
+  expect(noMenuCard).not.toContain("Not serving");
+  expect(noMenuCard).not.toContain("See full menu");
+});
+
+test("when filters hide every dish in a hall's meal period, its card says so", () => {
+  const filteredOut: Hall = { ...chase, mealPeriods: [meal("Late Lunch", "14:00", "16:30", [])] };
+  const chaseCard = card(render([lenoir, filteredOut], { meal: "Late Lunch" }), "Chase");
+  expect(chaseCard).toContain("No items match your filters");
+  expect(chaseCard).not.toContain('aria-label="Chase stations"');
+});
+
+test("Today no longer renders the full menus", () => {
+  const html = render();
+  expect(html).not.toContain("Hash Browns");
+  expect(html).not.toMatch(/aria-label="(Star|Unstar) /);
+  expect(html).not.toContain("g protein");
+});
