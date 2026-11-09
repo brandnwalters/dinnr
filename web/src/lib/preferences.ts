@@ -102,9 +102,13 @@ export function todayQueryPreferences({
   return { dietFilters, allergens, favorites };
 }
 
+/** The diet and allergen filters, which travel together (filter sheet, filter button, combos). */
+export type Filters = Pick<Preferences, "dietFilters" | "allergens">;
+
 /** "Clear filters": `prefs` with the diet and allergen filters turned off, everything else kept. */
 export function clearFilters(prefs: Preferences): Preferences {
-  return { ...prefs, dietFilters: [], allergens: [] };
+  const none: Filters = { dietFilters: [], allergens: [] };
+  return { ...prefs, ...none };
 }
 
 /** The stored form: preferences plus the schema version. */

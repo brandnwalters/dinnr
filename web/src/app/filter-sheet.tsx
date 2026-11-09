@@ -1,6 +1,7 @@
 "use client";
 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import type { Filters } from "@/lib/preferences";
 import { usePreferences } from "@/lib/preferences-store";
 import { AllergenDisclaimer } from "./allergen-disclaimer";
 import { FilterButton, FilterOptions } from "./filter-options";
@@ -12,12 +13,14 @@ import { FilterButton, FilterOptions } from "./filter-options";
  */
 export function FilterSheet() {
   const [preferences, updatePreferences] = usePreferences();
-  const dietFilters = preferences?.dietFilters ?? [];
-  const allergens = preferences?.allergens ?? [];
+  const filters: Filters = {
+    dietFilters: preferences?.dietFilters ?? [],
+    allergens: preferences?.allergens ?? [],
+  };
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <FilterButton dietFilters={dietFilters} allergens={allergens} />
+        <FilterButton filters={filters} />
       </SheetTrigger>
       <SheetContent side="bottom" className="max-h-sheet overflow-y-auto md:mx-auto md:max-w-2xl md:rounded-t-xl">
         <SheetHeader>
@@ -25,12 +28,7 @@ export function FilterSheet() {
           <SheetDescription>Saved on this device and applied to every menu.</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-6">
-          <FilterOptions
-            dietFilters={dietFilters}
-            allergens={allergens}
-            onDietFiltersChange={(dietFilters) => updatePreferences((p) => ({ ...p, dietFilters }))}
-            onAllergensChange={(allergens) => updatePreferences((p) => ({ ...p, allergens }))}
-          />
+          <FilterOptions filters={filters} onChange={(changed) => updatePreferences((p) => ({ ...p, ...changed }))} />
         </div>
       </SheetContent>
     </Sheet>
