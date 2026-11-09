@@ -3,7 +3,7 @@
 Compare UNC's two all-you-care-to-eat dining halls, **Top of Lenoir** and **Chase**, side by side,
 filter by diet and allergens, and get item combinations that hit your macro goals.
 
-**Live app:** TODO: live URL (not deployed yet; see [`docs/deploy.md`](docs/deploy.md))
+**Live app:** <https://dinnr-unc.vercel.app> (deployment: [`docs/deploy.md`](docs/deploy.md))
 
 ![Dinnr showing Top of Lenoir and Chase side by side for Brunch](docs/screenshot-today.png)
 
