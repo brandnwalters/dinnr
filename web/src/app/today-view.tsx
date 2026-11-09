@@ -2,15 +2,11 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ALLERGENS } from "@/lib/allergens";
-import { DIETARY_TAGS } from "@/lib/dietary-tags";
 import { toggleFavorite } from "@/lib/favorites";
 import { todayQueryPreferences } from "@/lib/preferences";
 import { usePreferences } from "@/lib/preferences-store";
 import type { TodayMenu } from "@/lib/today";
 import { loadToday } from "./actions";
-import { AllergenDisclaimer } from "./allergen-disclaimer";
-import { CheckboxFilters } from "./checkbox-filters";
 import { HallMenu } from "./hall-menu";
 import { MacroCombos } from "./macro-combos";
 
@@ -20,7 +16,8 @@ import { MacroCombos } from "./macro-combos";
  * whenever the selected meal (`?meal=Dinner`, set by each hall's meal
  * switcher) or a preference the server query reads (`todayQueryPreferences`:
  * filters, favorites) changes. Nothing is shown before then, so filtered-out items never
- * flash on screen.
+ * flash on screen. Diet and allergen filters are set in the header's filter
+ * sheet (`FilterSheet`).
  */
 export function TodayView() {
   const [preferences, updatePreferences] = usePreferences();
@@ -43,22 +40,6 @@ export function TodayView() {
   if (!preferences) return <p>Loading today&apos;s menus…</p>;
   return (
     <>
-      {/* Strict cutoffs: an item must carry every checked diet tag, and none of the checked allergens. */}
-      <CheckboxFilters
-        legend="Only show items that are"
-        name="diet"
-        options={DIETARY_TAGS}
-        selected={preferences.dietFilters}
-        onChange={(dietFilters) => updatePreferences((p) => ({ ...p, dietFilters }))}
-      />
-      <CheckboxFilters
-        legend="Hide items containing"
-        name="allergen"
-        options={ALLERGENS}
-        selected={preferences.allergens}
-        onChange={(allergens) => updatePreferences((p) => ({ ...p, allergens }))}
-      />
-      <AllergenDisclaimer allergens={preferences.allergens} />
       {today === null ? (
         <p>Loading today&apos;s menus…</p>
       ) : (
