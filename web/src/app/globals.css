@@ -1,80 +1,147 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * Theme tokens: the one place every color, radius and spacing value comes from.
+ * Components use Tailwind utilities generated from these (`bg-primary`,
+ * `text-status-serving`, `rounded-lg`, `p-4`, `min-h-tap`), never raw values.
+ *
+ * - `--brand` is the single accent (Carolina blue). Primary, ring and the
+ *   active-tab highlight all point at it, so swapping the accent is one edit.
+ * - Status colors: serving (green), opens later (amber), closed / no menu (gray).
+ * - Light values only for now; dark values arrive with the Appearance setting.
+ *   shadcn's `dark:` variant is kept so its components are ready for them.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* Spacing scale: every `p-*`, `gap-*`, `h-*` step is a multiple of this. */
+  --spacing: 0.25rem;
+  /* Minimum tap target (~44px) and the phone tab bar's height. */
+  --spacing-tap: 2.75rem;
+  --spacing-tab-bar: 4rem;
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-status-serving: var(--status-serving);
+  --color-status-serving-foreground: var(--status-serving-foreground);
+  --color-status-opens-later: var(--status-opens-later);
+  --color-status-opens-later-foreground: var(--status-opens-later-foreground);
+  --color-status-closed: var(--status-closed);
+  --color-status-closed-foreground: var(--status-closed-foreground);
+  --color-warning: var(--warning);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --radius: 0.625rem;
+
+  /* The accent: Carolina blue (#4B9CD3). Dark text on it for contrast. */
+  --brand: oklch(0.68 0.11 240);
+  --brand-foreground: oklch(0.145 0 0);
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  /* shadcn's `accent` is the neutral hover surface, not the brand accent. */
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: var(--brand);
+
+  --status-serving: oklch(0.6 0.15 150);
+  --status-serving-foreground: oklch(1 0 0);
+  --status-opens-later: oklch(0.77 0.16 70);
+  --status-opens-later-foreground: oklch(0.145 0 0);
+  --status-closed: oklch(0.87 0 0);
+  --status-closed-foreground: oklch(0.205 0 0);
+  /* Cautionary notes, such as the allergen disclaimer. */
+  --warning: oklch(0.56 0.15 50);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
   html {
-    color-scheme: dark;
+    @apply font-sans;
   }
 }
+
+/* Legacy classes still used by the old Today content (retired as screens are rebuilt). */
 
 .dietary-tags {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-left: 0.5rem;
+  gap: --spacing(1);
+  margin-left: --spacing(2);
   list-style: none;
 }
 
 .dietary-tag {
-  padding: 0 0.4rem;
+  padding: 0 --spacing(1.5);
   border: 1px solid currentColor;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   opacity: 0.8;
 }
 
 .checkbox-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
-  margin: 1rem 0;
-  padding: 0.5rem;
+  gap: --spacing(1) --spacing(4);
+  margin: --spacing(4) 0;
+  padding: --spacing(2);
 }
 
 .allergen-disclaimer {
-  margin: 0.5rem 0 1rem;
-  padding: 0.5rem 0.75rem;
-  border-left: 4px solid #b45309;
-  background: rgba(180, 83, 9, 0.1);
+  margin: --spacing(2) 0 --spacing(4);
+  padding: --spacing(2) --spacing(3);
+  border-left: 4px solid var(--warning);
+  background: color-mix(in oklch, var(--warning) 10%, transparent);
 }
