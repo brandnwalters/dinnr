@@ -166,12 +166,6 @@ importers:
 
   .:
     dependencies:
-      '@neon/config':
-        specifier: ^1.12.0
-        version: 1.12.0
-      '@neon/env':
-        specifier: ^2.0.0
-        version: 2.0.0
       next:
         specifier: 16.4.5
         version: 16.4.5(@babel/core@7.29.13(supports-color@7.2.0))(@types/node@20.19.43)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -185,6 +179,12 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
     devDependencies:
+      '@neon/config':
+        specifier: ^1.12.0
+        version: 1.12.0
+      '@neon/env':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@types/node':
         specifier: ^20
         version: 20.19.43

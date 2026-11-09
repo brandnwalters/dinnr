@@ -35,7 +35,8 @@ These steps need accounts and credentials, so they are done by hand.
 
 Alternative: the Neon CLI. In `web/`, `neon init` links the project (`web/neon.ts` holds the branch
 policy; the `web/.neon` link file is gitignored) and `neon env pull` writes `DATABASE_URL` (pooled)
-and `DATABASE_URL_UNPOOLED` (direct) to `web/.env.local`.
+and `DATABASE_URL_UNPOOLED` (direct) to `web/.env.local`. The GitHub secret in step 2 takes the
+`DATABASE_URL_UNPOOLED` value; Vercel in step 4 takes `DATABASE_URL`.
 
 Alternative: install Neon from the Vercel Marketplace (Vercel project → Storage → Neon). It creates
 the database and sets `DATABASE_URL` (pooled) on the Vercel project for you. You still copy the
@@ -62,7 +63,8 @@ green. (Scheduled runs only fire for the workflow on the default branch, so merg
 2. **Root Directory**: `web`. Framework preset: Next.js (auto-detected). Leave build and install
    commands at their defaults: `web/vercel.json` overrides them to run pnpm 12.18.0 via `npx`.
    Vercel's own pnpm detection can't read the pnpm 12 lockfile, and its corepack support didn't
-   pick up `packageManager`. `engines.node` in `web/package.json` pins Node 24.
+   pick up `packageManager`. `engines.node` in `web/package.json` pins Node 24. Keep the dashboard's Install
+   and Build Command overrides off: they take precedence over `vercel.json`.
 3. **Environment Variables** (Production, and Preview if you want previews to work):
    - `DATABASE_URL` = the Neon **pooled** connection string (skip if the Marketplace integration
      already set it).
@@ -70,8 +72,10 @@ green. (Scheduled runs only fire for the workflow on the default branch, so merg
 
 ### 5. Check it
 
-Open the production URL (e.g. `https://dinnr.vercel.app`). It should show today's Lenoir menu from
-Neon. `/api/health` round-trips to the database and returns `{"ok":true,"migrations":N}`. If the page is empty, check the latest **scrape** run succeeded today.
+Open the production URL, <https://dinnr-unc.vercel.app>. It should show today's Lenoir menu from
+Neon. `/api/health` round-trips to the database and returns `{"ok":true,"migrations":N}`. If the
+page is empty, check the latest **scrape** run succeeded today. (Per-deployment URLs such as
+`dinnr-<hash>-brandnwalters.vercel.app` sit behind Vercel Authentication; use the production URL.)
 
 ## Operating notes
 

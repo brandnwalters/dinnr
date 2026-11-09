@@ -9,7 +9,7 @@
 - `web/`: Next.js (TypeScript, App Router) app. Reads the database; never writes the schema.
 - `fixtures/unc/`: saved UNC pages for tests. See `fixtures/unc/README.md` for provenance.
 
-Prerequisites: Docker, `uv`, Node 20+, `pnpm`.
+Prerequisites: Docker, `uv`, Node 24, `pnpm` 12.
 
 ## Start the database
 
