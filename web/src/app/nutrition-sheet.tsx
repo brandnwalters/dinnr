@@ -46,7 +46,7 @@ export function NutritionSheet({
       <DialogContent
         showCloseButton={false}
         aria-describedby={undefined}
-        className="top-auto bottom-0 max-h-[85dvh] max-w-full translate-y-0 sm:max-w-full overflow-y-auto rounded-b-none md:top-1/2 md:bottom-auto md:max-w-md md:-translate-y-1/2 md:rounded-xl"
+        className="top-auto bottom-0 max-h-sheet max-w-full translate-y-0 sm:max-w-full overflow-y-auto rounded-b-none md:top-1/2 md:bottom-auto md:max-w-md md:-translate-y-1/2 md:rounded-xl"
       >
         <DialogHeader className="flex-row items-start justify-between gap-4">
           <DialogTitle className="pt-3 text-lg">{item.name}</DialogTitle>

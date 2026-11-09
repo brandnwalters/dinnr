@@ -1,8 +1,8 @@
 // The on-device preferences store, against an in-memory stand-in for localStorage.
 import { expect, test } from "vitest";
-import { DEFAULT_PREFERENCES } from "./preferences";
+import { DEFAULT_PREFERENCES, PREFERENCES_STORAGE_KEY } from "./preferences";
 import { memoryStorage } from "../../test/memory-storage";
-import { createPreferencesStore, PREFERENCES_STORAGE_KEY } from "./preferences-store";
+import { createPreferencesStore } from "./preferences-store";
 
 test("a device with nothing stored gets the defaults", () => {
   expect(createPreferencesStore(memoryStorage()).get()).toEqual(DEFAULT_PREFERENCES);

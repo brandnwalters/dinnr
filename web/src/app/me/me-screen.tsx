@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FavoriteDish } from "@/lib/favorites";
 import type { Theme } from "@/lib/preferences";
+import { Bone } from "../menu-skeleton";
 import { AppearanceSetting } from "./appearance-setting";
 import { FavoritesList } from "./favorites-list";
 
@@ -46,6 +47,26 @@ export function MeScreen({
         </CardContent>
       </Card>
       <About />
+    </div>
+  );
+}
+
+/**
+ * Placeholders for the Me screen's cards while the on-device preferences are
+ * read. Announced to assistive tech as "Loading your favorites and settings".
+ */
+export function MeSkeleton() {
+  return (
+    <div role="status" className="flex flex-col gap-4">
+      <span className="sr-only">Loading your favorites and settings</span>
+      {[3, 1, 3].map((rows, card) => (
+        <div key={card} aria-hidden className="flex flex-col gap-3 rounded-xl border p-4">
+          <Bone className="h-6 w-1/3" />
+          {Array.from({ length: rows }, (_, row) => (
+            <Bone key={row} className="h-tap w-full" />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

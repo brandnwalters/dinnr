@@ -4,7 +4,8 @@ import { FavoriteButton } from "./favorite-button";
 import { NoMatchingItems } from "./menu-empty-states";
 import { NutritionSheet } from "./nutrition-sheet";
 import { stationAnchorId } from "@/lib/menus-link";
-import type { Hall, HallStatus, MealPeriod, MenuItem } from "@/lib/today";
+import { hours, statusText, statusTone, type StatusTone } from "@/lib/hall-status";
+import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
 import { cn } from "@/lib/utils";
 
 /**
@@ -27,25 +28,11 @@ function MacroSummary({ item }: { item: MenuItem }) {
   );
 }
 
-/** "17:00" -> "5pm", "10:30" -> "10:30am". */
-function clock(hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}${m === 0 ? "" : `:${String(m).padStart(2, "0")}`}${h < 12 ? "am" : "pm"}`;
-}
-
-/** A meal period's hours, e.g. "11am–2:30pm", or null without readable times. */
-export function hours(mealPeriod: MealPeriod): string | null {
-  return mealPeriod.start && mealPeriod.end ? `${clock(mealPeriod.start)}–${clock(mealPeriod.end)}` : null;
-}
-
-/** The status theme token each hall status is drawn in: serving, opens later, or closed / no menu. */
-const STATUS_PILL_CLASS: Record<HallStatus, string> = {
+/** The status theme tokens each status tone is drawn in. */
+const STATUS_PILL_CLASS: Record<StatusTone, string> = {
   serving: "bg-status-serving text-status-serving-foreground",
   "opens-later": "bg-status-opens-later text-status-opens-later-foreground",
-  "done-for-today": "bg-status-closed text-status-closed-foreground",
-  "closed-today": "bg-status-closed text-status-closed-foreground",
-  "no-menu": "bg-status-closed text-status-closed-foreground",
+  closed: "bg-status-closed text-status-closed-foreground",
 };
 
 /** The hall's status (wording from `statusText`) as a pill colored by status. */
@@ -53,7 +40,7 @@ export function StatusPill({ hall }: { hall: Hall }) {
   return (
     <p
       data-status={hall.status}
-      className={cn("w-fit rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_PILL_CLASS[hall.status])}
+      className={cn("w-fit rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_PILL_CLASS[statusTone(hall)])}
     >
       {statusText(hall)}
     </p>
@@ -75,21 +62,15 @@ export function HallMenuHeader({ hall, headingId }: { hall: Hall; headingId: str
   );
 }
 
-/** The hall's status line, e.g. "Open now: Lunch until 2:30pm" or "Closed today". */
-export function statusText(hall: Hall): string {
-  const current = hall.mealPeriods.find((mp) => mp.name === hall.currentMealPeriod);
-  switch (hall.status) {
-    case "serving":
-      return `Open now: ${current!.name} until ${clock(current!.end!)}`;
-    case "opens-later":
-      return `${current!.name} starts at ${clock(current!.start!)}`;
-    case "done-for-today":
-      return "Closed for the rest of today";
-    case "closed-today":
-      return "Closed today";
-    case "no-menu":
-      return "No menu for today yet";
-  }
+/** A meal period's name and hours, e.g. "Lunch · 11am–2:30pm" (just the name without readable times). */
+export function MealPeriodHeading({ mealPeriod }: { mealPeriod: MealPeriod }) {
+  const time = hours(mealPeriod);
+  return (
+    <h3 className="text-sm font-medium">
+      {mealPeriod.name}
+      {time && ` · ${time}`}
+    </h3>
+  );
 }
 
 /**
@@ -152,10 +133,7 @@ export function MealPeriodMenu({
 }) {
   return (
     <section>
-      <h3 className="text-sm font-medium">
-        {mealPeriod.name}
-        {hours(mealPeriod) && ` · ${hours(mealPeriod)}`}
-      </h3>
+      <MealPeriodHeading mealPeriod={mealPeriod} />
       {mealPeriod.stations.length === 0 && <NoMatchingItems onClearFilters={onClearFilters} />}
       {mealPeriod.favorites.length > 0 && (
         <section>

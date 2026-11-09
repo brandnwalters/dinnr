@@ -1,7 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { clearFilters } from "@/lib/preferences";
 import { usePreferences } from "@/lib/preferences-store";
+import { hallQuery } from "../hall-columns";
 import { MenuSkeleton } from "../menu-skeleton";
 import { useTodayMenu } from "../today-menu-provider";
 import { CombosScreen } from "./combos-screen";
@@ -18,15 +20,15 @@ export function CombosView() {
   return (
     <CombosScreen
       halls={menu.halls}
-      query={{ meal: searchParams.get("meal") ?? undefined, hall: searchParams.get("hall") ?? undefined }}
+      query={hallQuery(searchParams)}
       targets={preferences.macroTargets}
       onTargetsChange={(macroTargets) => updatePreferences((p) => ({ ...p, macroTargets }))}
       includeExcludedStations={preferences.includeExcludedStations}
       onIncludeExcludedStationsChange={(includeExcludedStations) =>
         updatePreferences((p) => ({ ...p, includeExcludedStations }))
       }
-      dietFilters={preferences.dietFilters}
-      allergens={preferences.allergens}
+      filters={{ dietFilters: preferences.dietFilters, allergens: preferences.allergens }}
+      onClearFilters={() => updatePreferences(clearFilters)}
     />
   );
 }

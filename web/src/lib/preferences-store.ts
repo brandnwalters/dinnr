@@ -7,8 +7,6 @@ import { parsePreferences, PREFERENCES_STORAGE_KEY, serializePreferences, type P
  * `preferences.ts` (add new fields there, not here).
  */
 
-export { PREFERENCES_STORAGE_KEY };
-
 export type PreferencesStore = {
   get(): Preferences;
   update(change: (current: Preferences) => Preferences): void;

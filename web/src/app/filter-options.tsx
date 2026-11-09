@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { ALLERGENS, type Allergen } from "@/lib/allergens";
 import { DIETARY_TAGS, type DietaryTag } from "@/lib/dietary-tags";
+import type { Filters } from "@/lib/preferences";
 import { AllergenDisclaimer } from "./allergen-disclaimer";
 import { DIET_CHIP_CLASS } from "./diet-chips";
 
@@ -15,30 +16,21 @@ import { DIET_CHIP_CLASS } from "./diet-chips";
  * pressed. Presentational, so it renders to static markup in tests;
  * `FilterSheet` wires it to the on-device preferences.
  */
-export function FilterOptions({
-  dietFilters,
-  allergens,
-  onDietFiltersChange,
-  onAllergensChange,
-}: {
-  dietFilters: readonly DietaryTag[];
-  allergens: readonly Allergen[];
-  onDietFiltersChange?: (dietFilters: DietaryTag[]) => void;
-  onAllergensChange?: (allergens: Allergen[]) => void;
-}) {
+export function FilterOptions({ filters, onChange }: { filters: Filters; onChange?: (filters: Filters) => void }) {
+  const { dietFilters, allergens } = filters;
   return (
     <div className="flex flex-col gap-4">
       <ChipGroup
         legend="Only show items that are"
         options={DIETARY_TAGS}
         selected={dietFilters}
-        onChange={onDietFiltersChange}
+        onChange={onChange && ((dietFilters: DietaryTag[]) => onChange({ ...filters, dietFilters }))}
       />
       <ChipGroup
         legend="Hide items containing"
         options={ALLERGENS}
         selected={allergens}
-        onChange={onAllergensChange}
+        onChange={onChange && ((allergens: Allergen[]) => onChange({ ...filters, allergens }))}
       />
       <AllergenDisclaimer allergens={allergens} />
       <AbbreviationLegend />
@@ -104,15 +96,8 @@ function ChipGroup<Code extends string>({
  * allergen filters (none at zero). Extra props are passed to the button, so a
  * sheet trigger can wrap it (`asChild`).
  */
-export function FilterButton({
-  dietFilters,
-  allergens,
-  ...props
-}: {
-  dietFilters: readonly DietaryTag[];
-  allergens: readonly Allergen[];
-} & React.ComponentProps<typeof Button>) {
-  const count = dietFilters.length + allergens.length;
+export function FilterButton({ filters, ...props }: { filters: Filters } & React.ComponentProps<typeof Button>) {
+  const count = filters.dietFilters.length + filters.allergens.length;
   return (
     <Button
       type="button"

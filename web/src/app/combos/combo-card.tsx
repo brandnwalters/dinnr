@@ -13,10 +13,17 @@ function withinTarget(total: number, range: MacroRange | undefined): boolean {
   return (range.min === undefined || total >= range.min) && (range.max === undefined || total <= range.max);
 }
 
+/** "≥ 30", "≤ 600", "50–90". */
+function rangeText({ min, max }: MacroRange): string {
+  if (min !== undefined && max !== undefined) return `${min}–${max}`;
+  return min !== undefined ? `≥ ${min}` : `≤ ${max}`;
+}
+
 /**
  * One suggested combo: its items with servings ("2× Grilled Chicken Breast")
  * and its calorie, protein, carb and fat totals as chips. A chip whose macro
- * has a target it meets is drawn in the accent and says "within target".
+ * has a target shows it ("50 g protein (target ≥ 30)"); one that meets it is
+ * drawn in the accent and says "within target" to assistive tech.
  */
 export function ComboCard({ combo, targets }: { combo: Combo; targets: MacroTargets }) {
   return (
@@ -31,7 +38,8 @@ export function ComboCard({ combo, targets }: { combo: Combo; targets: MacroTarg
         </ul>
         <ul aria-label="Totals" className="flex flex-wrap gap-1.5">
           {MACROS.map((macro) => {
-            const within = withinTarget(combo.totals[macro], targets[macro]);
+            const range = targets[macro];
+            const within = withinTarget(combo.totals[macro], range);
             return (
               <li
                 key={macro}
@@ -42,7 +50,12 @@ export function ComboCard({ combo, targets }: { combo: Combo; targets: MacroTarg
               >
                 {within && <Check aria-hidden className="size-3 text-brand" />}
                 {amount(combo.totals[macro])} {MACRO_LABELS[macro].total}
-                {within && <span className="sr-only"> (within target)</span>}
+                {range && (
+                  <span>
+                    {` (target ${rangeText(range)}`}
+                    {within && <span className="sr-only">, within target</span>})
+                  </span>
+                )}
               </li>
             );
           })}

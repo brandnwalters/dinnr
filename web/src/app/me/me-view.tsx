@@ -2,12 +2,12 @@
 
 import { removeFavorite } from "@/lib/favorites";
 import { usePreferences } from "@/lib/preferences-store";
-import { MeScreen } from "./me-screen";
+import { MeScreen, MeSkeleton } from "./me-screen";
 
 /** Favorites and the theme live on the device, so the Me screen is filled in the browser. */
 export function MeView() {
   const [preferences, updatePreferences] = usePreferences();
-  if (!preferences) return <p className="text-sm text-muted-foreground">Loading your favorites…</p>;
+  if (!preferences) return <MeSkeleton />;
   return (
     <MeScreen
       favorites={preferences.favorites}

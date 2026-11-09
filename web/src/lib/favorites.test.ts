@@ -2,7 +2,8 @@
 import { expect, test } from "vitest";
 import { removeFavorite, toggleFavorite } from "./favorites";
 import { memoryStorage } from "../../test/memory-storage";
-import { createPreferencesStore, PREFERENCES_STORAGE_KEY } from "./preferences-store";
+import { PREFERENCES_STORAGE_KEY } from "./preferences";
+import { createPreferencesStore } from "./preferences-store";
 
 const chicken = { normalizedName: "grilled chicken breast", name: "Grilled Chicken Breast" };
 const waffle = { normalizedName: "waffle", name: "Waffle" };

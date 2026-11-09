@@ -49,7 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
           <AllergenBanner />
         </header>
-        <main className="mx-auto w-full max-w-6xl px-4 pt-4 pb-[calc(var(--spacing-tab-bar)+var(--spacing)*4)] md:pb-8">
+        <main className="mx-auto w-full max-w-6xl px-4 pt-4 pb-tab-bar-clearance md:pb-8">
           <TodayMenuProvider>{children}</TodayMenuProvider>
         </main>
       </body>

@@ -1,7 +1,7 @@
 // The pre-paint theme script: which theme the page is drawn in, from the stored Appearance choice.
 import { expect, test } from "vitest";
 import { memoryStorage } from "../../test/memory-storage";
-import { PREFERENCES_STORAGE_KEY } from "./preferences-store";
+import { PREFERENCES_STORAGE_KEY } from "./preferences";
 import { THEME_SCRIPT } from "./theme";
 
 /** Runs the inline script the way the browser would, against stand-ins for its globals. */

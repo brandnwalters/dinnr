@@ -4,7 +4,8 @@ import { expect, test } from "vitest";
 import type { Allergen } from "@/lib/allergens";
 import type { MacroTargets } from "@/lib/combos";
 import type { Hall, MenuItem } from "@/lib/today";
-import { CombosScreen, type CombosQuery } from "./combos-screen";
+import type { HallQuery } from "../hall-columns";
+import { CombosScreen } from "./combos-screen";
 
 const food = (name: string, recipeId: number, calories: number, proteinG: number): MenuItem => ({
   name,
@@ -45,18 +46,18 @@ const HALLS = [
 
 const render = (
   targets: MacroTargets,
-  { includeExcludedStations = false, allergens = [] as Allergen[], query = {} as CombosQuery, halls = HALLS } = {},
+  { includeExcludedStations = false, allergens = [] as Allergen[], query = {} as HallQuery, halls = HALLS } = {},
 ) =>
   renderToStaticMarkup(
     <CombosScreen
       halls={halls}
       query={query}
-      dietFilters={[]}
-      allergens={allergens}
+      filters={{ dietFilters: [], allergens }}
       targets={targets}
       onTargetsChange={() => {}}
       includeExcludedStations={includeExcludedStations}
       onIncludeExcludedStationsChange={() => {}}
+      onClearFilters={() => {}}
     />,
   );
 
@@ -95,16 +96,22 @@ test("each hall gets combo cards from the selected meal, listing items with serv
   const lenoir = column(html, "Top of Lenoir");
   const chase = column(html, "Chase");
   expect(lenoir).toContain("2× Grilled Chicken");
-  expect(chips(lenoir)).toEqual(expect.arrayContaining(["280 cal (within target)", "50 g protein (within target)"]));
+  expect(chips(lenoir)).toEqual(
+    expect.arrayContaining(["280 cal (target ≤ 600, within target)", "50 g protein (target ≥ 30, within target)"]),
+  );
   expect(chase).toContain("1× Salmon");
-  expect(chips(chase)).toEqual(expect.arrayContaining(["300 cal (within target)", "34 g protein (within target)"]));
+  expect(chips(chase)).toEqual(
+    expect.arrayContaining(["300 cal (target ≤ 600, within target)", "34 g protein (target ≥ 30, within target)"]),
+  );
   expect(html).not.toContain("Lunch Only Wrap"); // not the selected meal
 });
 
-test("only totals whose macro has a target are marked within target", () => {
+test("only totals whose macro has a target show that target and are marked within target", () => {
   const firstCard = chips(column(render({ proteinG: { min: 30 } }), "Chase")).slice(0, 4); // 1× Salmon
+  const ranged = chips(column(render({ calories: { min: 200, max: 400 }, proteinG: { min: 30 } }), "Chase"));
 
-  expect(firstCard).toEqual(["300 cal", "34 g protein (within target)", "10 g carbs", "5 g fat"]);
+  expect(firstCard).toEqual(["300 cal", "34 g protein (target ≥ 30, within target)", "10 g carbs", "5 g fat"]);
+  expect(ranged[0]).toBe("300 cal (target 200–400, within target)");
 });
 
 test("with no targets, a prompt asks for at least one instead of each hall's combos", () => {
@@ -151,6 +158,41 @@ test("a hall that doesn't serve the selected meal period says so", () => {
 
   expect(column(html, "Top of Lenoir")).toContain("1× Omelet");
   expect(column(html, "Chase")).toContain("Not serving Brunch");
+});
+
+test("a hall closed all day or with no menu yet says so instead of 'Not serving'", () => {
+  const allDay = (status: Hall["status"]): Hall => ({
+    ...HALLS[1],
+    status,
+    currentMealPeriod: null,
+    selectedMealPeriod: null,
+    mealPeriods: [],
+  });
+  const closed = column(render({ proteinG: { min: 30 } }, { halls: [HALLS[0], allDay("closed-today")] }), "Chase");
+  const noMenu = column(render({ proteinG: { min: 30 } }, { halls: [HALLS[0], allDay("no-menu")] }), "Chase");
+
+  expect(closed).toContain("Closed all day");
+  expect(noMenu).toContain("Check back later");
+  for (const html of [closed, noMenu]) expect(html).not.toContain("Not serving");
+});
+
+test("when filters hide every dish in a hall's meal period, it says so and offers Clear filters", () => {
+  const filteredOut: Hall = { ...HALLS[1], mealPeriods: HALLS[1].mealPeriods.map((mp) => ({ ...mp, stations: [] })) };
+  const html = render({ proteinG: { min: 30 } }, { halls: [HALLS[0], filteredOut] });
+
+  expect(column(html, "Chase")).toContain("No items match your filters");
+  expect(column(html, "Chase")).toMatch(/<button\b[^>]*>Clear filters<\/button>/);
+  expect(column(html, "Top of Lenoir")).not.toContain("Clear filters");
+});
+
+test("the meal-period and hall switchers come first, above the targets card, even before any target is set", () => {
+  for (const html of [render({}), render({ proteinG: { min: 30 } })]) {
+    const targets = html.indexOf("Targets for one meal");
+    expect(html.indexOf('aria-label="Meal period"')).toBeGreaterThan(-1);
+    expect(html.indexOf('aria-label="Meal period"')).toBeLessThan(targets);
+    expect(html.indexOf('aria-label="Dining hall"')).toBeGreaterThan(-1);
+    expect(html.indexOf('aria-label="Dining hall"')).toBeLessThan(targets);
+  }
 });
 
 test("the hall switcher selects ?hall=, the first hall by default, keeping ?meal=", () => {
