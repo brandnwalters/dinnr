@@ -3,7 +3,7 @@ import type { Hall, MenuItem } from "@/lib/today";
 import { cn } from "@/lib/utils";
 import { HallMenuHeader, MealPeriodMenu } from "../hall-menu";
 import { HallSwitcher, selectedHall } from "../hall-switcher";
-import { NoMenuYet } from "../menu-empty-states";
+import { AllDayEmptyState } from "../menu-empty-states";
 import { MealPeriodSwitcher, NotServing } from "../meal-period-switcher";
 import { StationChips } from "../station-chips";
 
@@ -49,8 +49,8 @@ export function MenusScreen({
               className={cn("flex flex-col gap-3", h.slug !== hall && "hidden lg:flex")}
             >
               <HallMenuHeader hall={h} headingId={`menus-hall-${h.slug}`} />
-              {h.status === "no-menu" ? (
-                <NoMenuYet />
+              {h.status === "no-menu" || h.status === "closed-today" ? (
+                <AllDayEmptyState hall={h} />
               ) : mealPeriod ? (
                 <>
                   <StationChips hall={h} meal={mealPeriod.name} stations={mealPeriod.stations} />

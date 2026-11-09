@@ -169,6 +169,13 @@ test("with no menus posted anywhere, every hall says there's no menu yet", () =>
   expect(column(html, "Chase")).toContain("Check back later");
 });
 
+test("a hall closed all day says so instead of a meal period", () => {
+  const closed: Hall = { ...chase, status: "closed-today", currentMealPeriod: null, selectedMealPeriod: null, mealPeriods: [] };
+  const chaseColumn = column(renderToStaticMarkup(<MenusScreen halls={[lenoir, closed]} query={{}} />), "Chase");
+  expect(chaseColumn).toContain("Closed all day");
+  expect(chaseColumn).not.toContain("Not serving");
+});
+
 test("station chips follow the selected meal period", () => {
   const html = render({ meal: "Dinner" });
   expect(optionTag(html, "Top of Lenoir stations", "Grill")).toContain("meal=Dinner#station-top-of-lenoir-grill");

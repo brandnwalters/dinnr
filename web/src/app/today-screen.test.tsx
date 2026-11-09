@@ -167,7 +167,7 @@ test("a hall closed all day or with no menu yet gets a friendly state instead of
   const noMenu: Hall = { ...withStatus("no-menu"), mealPeriods: [] };
   const noMenuCard = card(render([lenoir, noMenu]), "Chase");
   expect(noMenuCard).toContain("Check back later");
-  expect(noMenuCard).not.toContain("Not serving");
+  expect(noMenuCard.match(/No menu for today yet/g)).toHaveLength(1); // the pill, not repeated below it  expect(noMenuCard).not.toContain("Not serving");
   expect(noMenuCard).not.toContain("See full menu");
 });
 

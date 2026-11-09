@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import type { Hall } from "@/lib/today";
 
 /**
  * The friendly, centered messages a hall's menu shows instead of dishes:
@@ -42,11 +43,21 @@ export function ClosedToday() {
   );
 }
 
+/**
+ * What a hall with nothing to show all day says instead of a meal period:
+ * `ClosedToday` or `NoMenuYet`, or null for a hall with menus today.
+ */
+export function AllDayEmptyState({ hall }: { hall: Hall }) {
+  if (hall.status === "closed-today") return <ClosedToday />;
+  if (hall.status === "no-menu") return <NoMenuYet />;
+  return null;
+}
+
 /** No menu has been scraped for this hall today. */
 export function NoMenuYet() {
   return (
-    <EmptyState title="No menu for today yet">
-      <p className="text-sm text-muted-foreground">UNC Dining hasn&apos;t posted it yet. Check back later.</p>
+    <EmptyState title="Nothing posted yet">
+      <p className="text-sm text-muted-foreground">UNC Dining hasn&apos;t posted today&apos;s menu. Check back later.</p>
     </EmptyState>
   );
 }
