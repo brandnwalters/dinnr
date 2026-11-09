@@ -1,7 +1,7 @@
-// UI smoke tests: the Me screen lists favorites (each with unstar), the Appearance setting and the About notes.
+// UI smoke tests: the Me screen lists favorites (each with unstar), the Appearance setting and the About notes; its loading skeleton.
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
-import { MeScreen } from "./me-screen";
+import { MeScreen, MeSkeleton } from "./me-screen";
 
 const favorites = [
   { normalizedName: "grilled chicken breast", name: "Grilled Chicken Breast" },
@@ -50,4 +50,12 @@ test("Appearance offers System, Light and Dark and exposes the current choice", 
 test("System is the choice shown when the device has no theme saved", () => {
   const html = renderToStaticMarkup(<MeScreen favorites={[]} theme="system" />);
   expect(html).toMatch(/role="radio" aria-checked="true"[^>]*>System</);
+});
+
+test("while preferences load, skeleton placeholders announce loading instead of the cards", () => {
+  const html = renderToStaticMarkup(<MeSkeleton />);
+
+  expect(html).toMatch(/<div[^>]*role="status"/);
+  expect(html).toContain("Loading your favorites and settings");
+  expect(html).not.toContain("My favorites");
 });

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /** One gray placeholder block. */
-function Bone({ className }: { className?: string }) {
+export function Bone({ className }: { className?: string }) {
   return <div className={cn("animate-pulse rounded-md bg-muted", className)} />;
 }
 
