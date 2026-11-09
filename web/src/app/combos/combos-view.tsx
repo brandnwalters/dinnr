@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { clearFilters } from "@/lib/preferences";
 import { usePreferences } from "@/lib/preferences-store";
 import { MenuSkeleton } from "../menu-skeleton";
 import { useTodayMenu } from "../today-menu-provider";
@@ -27,6 +28,7 @@ export function CombosView() {
       }
       dietFilters={preferences.dietFilters}
       allergens={preferences.allergens}
+      onClearFilters={() => updatePreferences(clearFilters)}
     />
   );
 }

@@ -10,6 +10,7 @@ import { AllergenDisclaimer } from "../allergen-disclaimer";
 import { HallMenuHeader } from "../hall-menu";
 import { HallSwitcher, selectedHall } from "../hall-switcher";
 import { MealPeriodSwitcher, NotServing } from "../meal-period-switcher";
+import { AllDayEmptyState, NoMatchingItems } from "../menu-empty-states";
 import { ComboCard } from "./combo-card";
 import { EmptyState } from "./empty-state";
 import { TargetsCard } from "./targets-card";
@@ -25,8 +26,9 @@ type ComboFilters = {
 };
 
 /**
- * The Combos tab: the targets card, then each hall's top combos for the meal
- * period picked in the shared meal-period switcher. Like Menus, phones show
+ * The Combos tab: the shared meal-period switcher (and, on phones, the hall
+ * switcher) at the top like Today and Menus, the targets card, then each
+ * hall's top combos for the picked meal period. Like Menus, phones show
  * one hall at a time (hall switcher) and from ~1024px up every hall gets a
  * column. Combos respect the diet/allergen filters and favor favorites.
  * Presentational: the URL, the menu and the saved targets come in as props.
@@ -37,6 +39,7 @@ export function CombosScreen({
   targets,
   onTargetsChange,
   onIncludeExcludedStationsChange,
+  onClearFilters,
   ...filters
 }: {
   halls: readonly Hall[];
@@ -44,12 +47,16 @@ export function CombosScreen({
   targets: MacroTargets;
   onTargetsChange?: (targets: MacroTargets) => void;
   onIncludeExcludedStationsChange?: (include: boolean) => void;
+  /** Turn off the diet and allergen filters (offered when they hide a whole meal period). */
+  onClearFilters?: () => void;
 } & ComboFilters) {
   const meal = selectedMealPeriod(halls, query.meal);
   const hall = selectedHall(halls, query.hall);
   const links = Object.fromEntries(Object.entries(query).filter(([, value]) => value !== undefined));
   return (
     <div className="flex flex-col gap-4">
+      <MealPeriodSwitcher mealPeriods={mealPeriodNames(halls)} selected={meal} query={links} />
+      <HallSwitcher halls={halls} selected={hall} query={links} className="lg:hidden" />
       <TargetsCard
         targets={targets}
         onTargetsChange={onTargetsChange}
@@ -63,8 +70,6 @@ export function CombosScreen({
         </EmptyState>
       ) : (
         <>
-          <MealPeriodSwitcher mealPeriods={mealPeriodNames(halls)} selected={meal} query={links} />
-          <HallSwitcher halls={halls} selected={hall} query={links} className="lg:hidden" />
           <div className="grid grid-cols-1 gap-6 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none">
             {halls.map((h) => {
               const mealPeriod = h.mealPeriods.find((mp) => mp.name === meal);
@@ -75,7 +80,11 @@ export function CombosScreen({
                   className={cn("flex flex-col gap-3", h.slug !== hall && "hidden lg:flex")}
                 >
                   <HallMenuHeader hall={h} headingId={`combos-hall-${h.slug}`} />
-                  {mealPeriod ? (
+                  {h.status === "no-menu" || h.status === "closed-today" ? (
+                    <AllDayEmptyState hall={h} />
+                  ) : mealPeriod?.stations.length === 0 ? (
+                    <NoMatchingItems onClearFilters={onClearFilters} />
+                  ) : mealPeriod ? (
                     <HallCombos mealPeriod={mealPeriod} targets={targets} {...filters} />
                   ) : (
                     meal && <NotServing mealPeriod={meal} />
