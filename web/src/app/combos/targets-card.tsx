@@ -43,7 +43,7 @@ export function TargetsCard({
     if (next) onTargetsChange?.(next);
   };
   return (
-    <Card size="sm">
+    <Card size="sm" className="md:max-w-xl">
       <CardHeader>
         <CardTitle>
           <h2>Targets for one meal</h2>

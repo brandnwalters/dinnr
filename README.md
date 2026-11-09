@@ -5,11 +5,10 @@ filter by diet and allergens, and get item combinations that hit your macro goal
 
 **Live app:** <https://dinnr-unc.vercel.app> (deployment: [`docs/deploy.md`](docs/deploy.md))
 
-![Dinnr showing Top of Lenoir and Chase side by side for Brunch](docs/screenshot-today.png)
+![Dinnr's Today screen: Top of Lenoir and Chase side by side for Brunch, with a starred favorite](docs/screenshot-today.png)
 
-<sub>Screenshot of a local run, with the database filled by a scrape of the saved fixture pages
-(Saturday 2026-11-07). Only four recipes have saved nutrition responses, so most items show no
-macros here. In production every item has them.</sub>
+<sub>The Today screen on a local run, with the database filled by a scrape of the saved fixture
+pages (real menus captured Saturday 2026-11-07).</sub>
 
 ## Why
 

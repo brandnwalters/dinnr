@@ -4,32 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { menusHref } from "@/lib/menus-link";
 import { stationPreview } from "@/lib/station-preview";
-import type { Hall, HallStatus, MealPeriod } from "@/lib/today";
-import { cn } from "@/lib/utils";
-import { hours, statusText } from "./hall-menu";
+import type { Hall, MealPeriod } from "@/lib/today";
+import { hours, StatusPill } from "./hall-menu";
 import { NotServing } from "./meal-period-switcher";
 import { ClosedToday, NoMatchingItems, NoMenuYet } from "./menu-empty-states";
-
-/** The status theme token each hall status is drawn in: serving, opens later, or closed / no menu. */
-const STATUS_PILL_CLASS: Record<HallStatus, string> = {
-  serving: "bg-status-serving text-status-serving-foreground",
-  "opens-later": "bg-status-opens-later text-status-opens-later-foreground",
-  "done-for-today": "bg-status-closed text-status-closed-foreground",
-  "closed-today": "bg-status-closed text-status-closed-foreground",
-  "no-menu": "bg-status-closed text-status-closed-foreground",
-};
-
-/** The hall's status (wording from `statusText`) as a pill colored by status. */
-function StatusPill({ hall }: { hall: Hall }) {
-  return (
-    <p
-      data-status={hall.status}
-      className={cn("w-fit rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_PILL_CLASS[hall.status])}
-    >
-      {statusText(hall)}
-    </p>
-  );
-}
 
 /**
  * "Your favorites here": the user's favorites in this meal period, each with

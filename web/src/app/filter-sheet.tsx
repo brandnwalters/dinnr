@@ -21,7 +21,7 @@ export function FilterSheet() {
       </SheetTrigger>
       <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto md:mx-auto md:max-w-2xl md:rounded-t-xl">
         <SheetHeader>
-          <SheetTitle>Filters</SheetTitle>
+          <SheetTitle className="text-lg">Filters</SheetTitle>
           <SheetDescription>Saved on this device and applied to every menu.</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-6">

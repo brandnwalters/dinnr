@@ -46,7 +46,7 @@ export function MenusScreen({
             <section
               key={h.slug}
               aria-labelledby={`menus-hall-${h.slug}`}
-              className={cn(h.slug !== hall && "hidden lg:block")}
+              className={cn("flex flex-col gap-3", h.slug !== hall && "hidden lg:flex")}
             >
               <HallMenuHeader hall={h} headingId={`menus-hall-${h.slug}`} />
               {h.status === "no-menu" ? (

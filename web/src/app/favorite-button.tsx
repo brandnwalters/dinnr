@@ -17,9 +17,3 @@ export function FavoriteButton({ item, onToggle }: { item: MenuItem; onToggle?: 
     </Button>
   );
 }
-
-/** "2 favorites this meal", or nothing when there are none. */
-export function FavoriteCount({ count }: { count: number }) {
-  if (count === 0) return null;
-  return <p className="favorite-count">{`${count} favorite${count === 1 ? "" : "s"} this meal`}</p>;
-}

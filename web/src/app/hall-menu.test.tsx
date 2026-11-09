@@ -3,7 +3,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import type { MenuItem } from "@/lib/today";
-import { HallMenu } from "./hall-menu";
+import { MealPeriodMenu } from "./hall-menu";
 
 const nutrition = (calories: number | null, proteinG: number | null) => ({
   servingSize: "4 oz",
@@ -17,27 +17,17 @@ const nutrition = (calories: number | null, proteinG: number | null) => ({
 type GrillItem = Omit<MenuItem, "normalizedName" | "favorite" | "allergens"> &
   Partial<Pick<MenuItem, "normalizedName" | "favorite" | "allergens">>;
 
-/** Lenoir serving Brunch, with these items at The Grill. */
-const renderGrill = (grillItems: GrillItem[], favoriteCount = 0) => {
+/** A Brunch menu with these items at The Grill. */
+const renderGrill = (grillItems: GrillItem[]) => {
   const items = grillItems.map((i) => ({ normalizedName: i.name.toLowerCase(), favorite: false, allergens: [], ...i }));
   return renderToStaticMarkup(
-    <HallMenu
-      hall={{
-        slug: "top-of-lenoir",
-        name: "Top of Lenoir",
-        status: "serving",
-        currentMealPeriod: "Brunch",
-        selectedMealPeriod: "Brunch",
-        favoriteCount,
-        mealPeriods: [
-          {
-            name: "Brunch",
-            start: "11:00",
-            end: "15:00",
-            favorites: items.filter((i) => i.favorite).map((item) => ({ station: "The Grill", item })),
-            stations: [{ name: "The Grill", items }],
-          },
-        ],
+    <MealPeriodMenu
+      mealPeriod={{
+        name: "Brunch",
+        start: "11:00",
+        end: "15:00",
+        favorites: items.filter((i) => i.favorite).map((item) => ({ station: "The Grill", item })),
+        stations: [{ name: "The Grill", items }],
       }}
     />,
   );
@@ -103,16 +93,12 @@ test("a row without nutrition shows no macros at all", () => {
   expect(mystery).not.toContain("null");
 });
 
-test("favorites are highlighted, each item has a star toggle, and the hall shows its favorite count", () => {
-  const html = renderGrill(
-    [
-      { name: "Grilled Chicken Breast", recipeId: 13708, dietaryTags: [], favorite: true },
-      { name: "Nashville Hot Chicken Biscuit", recipeId: 15469, dietaryTags: [] },
-    ],
-    1,
-  );
+test("favorites are highlighted and each item has a star toggle", () => {
+  const html = renderGrill([
+    { name: "Grilled Chicken Breast", recipeId: 13708, dietaryTags: [], favorite: true },
+    { name: "Nashville Hot Chicken Biscuit", recipeId: 15469, dietaryTags: [] },
+  ]);
 
-  expect(html).toContain("1 favorite this meal");
   const chicken = html.slice(html.indexOf('data-recipe="13708"'), html.indexOf('data-recipe="15469"'));
   expect(chicken).toContain('data-favorite="true"');
   expect(chicken).toContain('aria-pressed="true"');
@@ -125,7 +111,7 @@ test("favorites are highlighted, each item has a star toggle, and the hall shows
   expect(biscuit).toContain("Star Nashville Hot Chicken Biscuit");
 });
 
-test("favorites are listed at the top of the hall's list with their station, above the stations", () => {
+test("favorites are listed at the top of the meal's menu with their station, above the stations", () => {
   const html = renderGrill([
     { name: "Nashville Hot Chicken Biscuit", recipeId: 15469, dietaryTags: [] },
     { name: "Grilled Chicken Breast", recipeId: 13708, dietaryTags: [], favorite: true },
