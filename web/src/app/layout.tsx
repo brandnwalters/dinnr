@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import Link from "next/link";
 import { THEME_SCRIPT } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { AppHeaderHeight } from "./app-header-height";
 import { CurrentAppNav } from "./current-app-nav";
 import { AllergenBanner, FilterSheet } from "./filter-sheet";
 import { ThemeSync } from "./theme-sync";
@@ -35,7 +36,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-dvh">
         <ThemeSync />
-        <header className="sticky top-0 z-10 border-b bg-background">
+        <AppHeaderHeight selector="[data-app-header]" />
+        <header data-app-header className="sticky top-0 z-10 border-b bg-background">
           <div className="mx-auto flex min-h-tap max-w-6xl items-center justify-between gap-4 px-4 py-2">
             <Link href="/" className="text-xl font-bold tracking-tight">
               Dinnr

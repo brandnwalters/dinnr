@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { DietChips } from "./diet-chips";
 import { FavoriteButton, FavoriteCount } from "./favorite-button";
+import { NoMatchingItems } from "./menu-empty-states";
 import { NutritionSheet } from "./nutrition-sheet";
+import { stationAnchorId } from "@/lib/menus-link";
 import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
 import { cn } from "@/lib/utils";
 
@@ -100,13 +102,24 @@ function ItemRow({
 
 /**
  * One meal period's menu: its name and hours, the user's favorites first
- * ("Your favorites", each with its station), then every station in page order.
+ * ("Your favorites", each with its station), then every station in page order,
+ * each station's header pinned below the app header while its dishes scroll.
  */
 export function MealPeriodMenu({
   mealPeriod,
+  anchorHall,
   onToggleFavorite,
+  onClearFilters,
 }: {
   mealPeriod: MealPeriod;
+  /** Turn off the diet and allergen filters, offered when they hide every dish. */
+  onClearFilters?: () => void;
+  /**
+   * The hall's slug, to give each station its deep-link anchor
+   * (`stationAnchorId`). Only the Menus tab passes it, so hidden tabs kept
+   * alive by navigation never hold a duplicate id.
+   */
+  anchorHall?: string;
   /** Star / unstar a dish (by its normalized name). */
   onToggleFavorite?: (item: MenuItem) => void;
 }) {
@@ -116,7 +129,7 @@ export function MealPeriodMenu({
         {mealPeriod.name}
         {hours(mealPeriod) && ` · ${hours(mealPeriod)}`}
       </h3>
-      {mealPeriod.stations.length === 0 && <p>No items match your filters.</p>}
+      {mealPeriod.stations.length === 0 && <NoMatchingItems onClearFilters={onClearFilters} />}
       {mealPeriod.favorites.length > 0 && (
         <section className="favorites-group">
           <h4>Your favorites</h4>
@@ -130,8 +143,12 @@ export function MealPeriodMenu({
         </section>
       )}
       {mealPeriod.stations.map((station) => (
-        <section key={station.name}>
-          <h4>{station.name}</h4>
+        <section
+          key={station.name}
+          id={anchorHall ? stationAnchorId(anchorHall, station.name) : undefined}
+          className="scroll-mt-app-header"
+        >
+          <h4 className="sticky top-app-header z-1 bg-background py-2 font-semibold">{station.name}</h4>
           <ul>
             {station.items.map((item) => (
               <ItemRow key={item.recipeId} item={item} onToggleFavorite={onToggleFavorite} />
