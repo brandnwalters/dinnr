@@ -102,6 +102,11 @@ export function todayQueryPreferences({
   return { dietFilters, allergens, favorites };
 }
 
+/** "Clear filters": `prefs` with the diet and allergen filters turned off, everything else kept. */
+export function clearFilters(prefs: Preferences): Preferences {
+  return { ...prefs, dietFilters: [], allergens: [] };
+}
+
 /** The stored form: preferences plus the schema version. */
 export function serializePreferences(prefs: Preferences): string {
   return JSON.stringify({ version: PREFERENCES_VERSION, ...prefs });

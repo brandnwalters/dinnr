@@ -100,9 +100,77 @@ test("a hall switcher selects the hall from ?hall=, the first hall by default, k
 test("each hall's favorites, with their stations, come before its first station", () => {
   const html = render();
   const lenoirColumn = column(html, "Top of Lenoir");
-  const favorites = lenoirColumn.slice(lenoirColumn.indexOf("Your favorites"), lenoirColumn.indexOf(">Grill<"));
+  const firstStation = lenoirColumn.indexOf('id="station-top-of-lenoir-grill"');
+  const favorites = lenoirColumn.slice(lenoirColumn.indexOf("Your favorites"), firstStation);
   expect(lenoirColumn.indexOf("Your favorites")).toBeGreaterThan(-1);
+  expect(firstStation).toBeGreaterThan(lenoirColumn.indexOf("Your favorites"));
   expect(favorites).toContain("Grilled Chicken Breast");
   expect(favorites).toContain("Pasta");
   expect(favorites).not.toContain("Nashville");
+});
+
+test("each hall has a row of station chips linking to that hall's station anchors", () => {
+  const html = render();
+  const lenoirColumn = column(html, "Top of Lenoir");
+  expect(lenoirColumn).toContain('aria-label="Top of Lenoir stations"');
+  expect(optionTag(html, "Top of Lenoir stations", "Grill")).toContain(
+    'href="/menus?hall=top-of-lenoir&amp;meal=Lunch#station-top-of-lenoir-grill"',
+  );
+  expect(optionTag(html, "Top of Lenoir stations", "Pasta")).toContain("#station-top-of-lenoir-pasta");
+  expect(lenoirColumn).toContain('id="station-top-of-lenoir-grill"');
+  expect(lenoirColumn).toContain('id="station-top-of-lenoir-pasta"');
+  const lateLunch = render({ meal: "Late Lunch" });
+  expect(optionTag(lateLunch, "Chase stations", "Deli")).toContain(
+    'href="/menus?hall=chase&amp;meal=Late+Lunch#station-chase-deli"',
+  );
+  expect(column(lateLunch, "Chase")).toContain('id="station-chase-deli"');
+});
+
+test("when filters hide every dish in a hall's meal period, it says so and offers Clear filters", () => {
+  const filteredOut: Hall = { ...chase, mealPeriods: [meal("Late Lunch", "14:00", "16:30", [])] };
+  const html = renderToStaticMarkup(
+    <MenusScreen halls={[lenoir, filteredOut]} query={{ meal: "Late Lunch" }} onClearFilters={() => {}} />,
+  );
+  const chaseColumn = column(html, "Chase");
+  expect(chaseColumn).toContain("No items match your filters");
+  expect(chaseColumn).toMatch(/<button\b[^>]*>Clear filters<\/button>/);
+  expect(chaseColumn).not.toContain('aria-label="Chase stations"');
+  expect(column(html, "Top of Lenoir")).not.toContain("No items match your filters");
+});
+
+test("a hall with no menu posted for today says so instead of a meal period", () => {
+  const noMenu: Hall = {
+    ...chase,
+    status: "no-menu",
+    currentMealPeriod: null,
+    selectedMealPeriod: null,
+    mealPeriods: [],
+  };
+  const html = render();
+  expect(html).not.toContain("Check back later");
+  const chaseColumn = column(
+    renderToStaticMarkup(<MenusScreen halls={[lenoir, noMenu]} query={{}} />),
+    "Chase",
+  );
+  expect(chaseColumn).toContain("Check back later");
+  expect(chaseColumn).not.toContain("Not serving");
+});
+
+test("with no menus posted anywhere, every hall says there's no menu yet", () => {
+  const noMenu = (hall: Hall): Hall => ({
+    ...hall,
+    status: "no-menu",
+    currentMealPeriod: null,
+    selectedMealPeriod: null,
+    mealPeriods: [],
+  });
+  const html = renderToStaticMarkup(<MenusScreen halls={[noMenu(lenoir), noMenu(chase)]} query={{}} />);
+  expect(column(html, "Top of Lenoir")).toContain("Check back later");
+  expect(column(html, "Chase")).toContain("Check back later");
+});
+
+test("station chips follow the selected meal period", () => {
+  const html = render({ meal: "Dinner" });
+  expect(optionTag(html, "Top of Lenoir stations", "Grill")).toContain("meal=Dinner#station-top-of-lenoir-grill");
+  expect(column(html, "Top of Lenoir")).not.toContain(">Pasta<");
 });

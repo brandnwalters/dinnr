@@ -1,6 +1,6 @@
-// Preference parsing: the Appearance `theme` field and what the Today query reads.
+// Preference parsing: the Appearance `theme` field, what the Today query reads, and clearing filters.
 import { expect, test } from "vitest";
-import { DEFAULT_PREFERENCES, parsePreferences, todayQueryPreferences } from "./preferences";
+import { clearFilters, DEFAULT_PREFERENCES, parsePreferences, todayQueryPreferences } from "./preferences";
 
 test("the theme defaults to following the system", () => {
   expect(DEFAULT_PREFERENCES.theme).toBe("system");
@@ -33,4 +33,21 @@ test("the theme is not part of the Today query, so changing it doesn't reload me
 
   expect(light).not.toHaveProperty("theme");
   expect(JSON.stringify(light)).toBe(JSON.stringify(dark));
+});
+
+test("Clear filters turns off the diet and allergen filters and keeps everything else", () => {
+  const favorites = [{ normalizedName: "penne alfredo", name: "Penne Alfredo" }];
+  const prefs = parsePreferences({
+    dietFilters: ["vegan", "halal"],
+    allergens: ["milk"],
+    favorites,
+    theme: "dark",
+    includeExcludedStations: true,
+  });
+  const cleared = clearFilters(prefs);
+  expect(cleared.dietFilters).toEqual([]);
+  expect(cleared.allergens).toEqual([]);
+  expect(cleared.favorites).toEqual(favorites);
+  expect(cleared.theme).toBe("dark");
+  expect(cleared.includeExcludedStations).toBe(true);
 });

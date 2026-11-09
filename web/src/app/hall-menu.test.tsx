@@ -98,12 +98,12 @@ test("favorites are listed at the top of the hall's list with their station, abo
     { name: "Grilled Chicken Breast", recipeId: 13708, dietaryTags: [], favorite: true },
   ]);
 
-  const top = html.slice(html.indexOf("Your favorites"), html.indexOf("<h4>The Grill</h4>"));
+  const top = html.slice(html.indexOf("Your favorites"), html.indexOf(">The Grill</h4>"));
   expect(top).toContain("Grilled Chicken Breast");
   expect(top).toContain("The Grill");
   expect(top).not.toContain("Nashville");
   // Still in its station below too.
-  expect(html.slice(html.indexOf("<h4>The Grill</h4>"))).toContain("Grilled Chicken Breast");
+  expect(html.slice(html.indexOf(">The Grill</h4>"))).toContain("Grilled Chicken Breast");
 });
 
 test("with no favorites there's no favorites group", () => {

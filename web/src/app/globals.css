@@ -24,6 +24,12 @@
   /* Minimum tap target (~44px) and the phone tab bar's height. */
   --spacing-tap: 2.75rem;
   --spacing-tab-bar: 4rem;
+  /*
+   * The sticky app header's height: pinned station headers sit just below it
+   * and station deep links scroll to it. This is the banner-less height for the
+   * first paint; `AppHeaderHeight` keeps it in step with the real header.
+   */
+  --spacing-app-header: calc(var(--spacing-tap) + var(--spacing) * 4 + 1px);
 }
 
 @theme inline {
