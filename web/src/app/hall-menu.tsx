@@ -1,11 +1,10 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { DietChips } from "./diet-chips";
-import { FavoriteButton, FavoriteCount } from "./favorite-button";
+import { FavoriteButton } from "./favorite-button";
 import { NoMatchingItems } from "./menu-empty-states";
 import { NutritionSheet } from "./nutrition-sheet";
 import { stationAnchorId } from "@/lib/menus-link";
-import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
+import type { Hall, HallStatus, MealPeriod, MenuItem } from "@/lib/today";
 import { cn } from "@/lib/utils";
 
 /**
@@ -40,13 +39,39 @@ export function hours(mealPeriod: MealPeriod): string | null {
   return mealPeriod.start && mealPeriod.end ? `${clock(mealPeriod.start)}–${clock(mealPeriod.end)}` : null;
 }
 
-/** The hall's name (an h2 with id `headingId`) and status line, e.g. "Open now: Lunch until 2:30pm". */
+/** The status theme token each hall status is drawn in: serving, opens later, or closed / no menu. */
+const STATUS_PILL_CLASS: Record<HallStatus, string> = {
+  serving: "bg-status-serving text-status-serving-foreground",
+  "opens-later": "bg-status-opens-later text-status-opens-later-foreground",
+  "done-for-today": "bg-status-closed text-status-closed-foreground",
+  "closed-today": "bg-status-closed text-status-closed-foreground",
+  "no-menu": "bg-status-closed text-status-closed-foreground",
+};
+
+/** The hall's status (wording from `statusText`) as a pill colored by status. */
+export function StatusPill({ hall }: { hall: Hall }) {
+  return (
+    <p
+      data-status={hall.status}
+      className={cn("w-fit rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_PILL_CLASS[hall.status])}
+    >
+      {statusText(hall)}
+    </p>
+  );
+}
+
+/**
+ * The hall's name (an h2 with id `headingId`) and status pill, e.g. "Open now:
+ * Lunch until 2:30pm", styled like the hall cards on Today.
+ */
 export function HallMenuHeader({ hall, headingId }: { hall: Hall; headingId: string }) {
   return (
-    <>
-      <h2 id={headingId}>{hall.name}</h2>
-      <p data-status={hall.status}>{statusText(hall)}</p>
-    </>
+    <div className="flex flex-col gap-1.5">
+      <h2 id={headingId} className="text-lg font-semibold">
+        {hall.name}
+      </h2>
+      <StatusPill hall={hall} />
+    </div>
   );
 }
 
@@ -127,18 +152,18 @@ export function MealPeriodMenu({
 }) {
   return (
     <section>
-      <h3>
+      <h3 className="text-sm font-medium">
         {mealPeriod.name}
         {hours(mealPeriod) && ` · ${hours(mealPeriod)}`}
       </h3>
       {mealPeriod.stations.length === 0 && <NoMatchingItems onClearFilters={onClearFilters} />}
       {mealPeriod.favorites.length > 0 && (
-        <section className="favorites-group">
-          <h4>Your favorites</h4>
+        <section>
+          <h4 className="py-2 font-semibold">Your favorites</h4>
           <ul>
             {mealPeriod.favorites.map(({ station, item }) => (
               <ItemRow key={`${station}:${item.recipeId}`} item={item} onToggleFavorite={onToggleFavorite}>
-                <small className="favorite-station"> · {station}</small>
+                <small className="text-muted-foreground">· {station}</small>
               </ItemRow>
             ))}
           </ul>
@@ -158,47 +183,6 @@ export function MealPeriodMenu({
           </ul>
         </section>
       ))}
-    </section>
-  );
-}
-
-/**
- * One hall's status, a switcher for today's meal periods, and the selected
- * meal's menu (`MealPeriodMenu`).
- */
-export function HallMenu({
-  hall,
-  onToggleFavorite,
-}: {
-  hall: Hall;
-  /** Star / unstar a dish (by its normalized name). */
-  onToggleFavorite?: (item: MenuItem) => void;
-}) {
-  const selected = hall.mealPeriods.find((mp) => mp.name === hall.selectedMealPeriod);
-  return (
-    <section aria-labelledby={`hall-${hall.slug}`}>
-      <HallMenuHeader hall={hall} headingId={`hall-${hall.slug}`} />
-      <FavoriteCount count={hall.favoriteCount} />
-
-      {hall.mealPeriods.length > 0 && (
-        <nav aria-label={`${hall.name} meal periods`}>
-          <ul>
-            {hall.mealPeriods.map((mp) => (
-              <li key={mp.name}>
-                <Link
-                  href={{ query: { meal: mp.name } }}
-                  aria-current={mp.name === hall.selectedMealPeriod ? "true" : undefined}
-                >
-                  {mp.name}
-                  {hours(mp) && ` (${hours(mp)})`}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
-
-      {selected && <MealPeriodMenu mealPeriod={selected} onToggleFavorite={onToggleFavorite} />}
     </section>
   );
 }
