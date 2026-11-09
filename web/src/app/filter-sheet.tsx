@@ -19,7 +19,7 @@ export function FilterSheet() {
       <SheetTrigger asChild>
         <FilterButton dietFilters={dietFilters} allergens={allergens} />
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto md:mx-auto md:max-w-2xl md:rounded-t-xl">
+      <SheetContent side="bottom" className="max-h-sheet overflow-y-auto md:mx-auto md:max-w-2xl md:rounded-t-xl">
         <SheetHeader>
           <SheetTitle className="text-lg">Filters</SheetTitle>
           <SheetDescription>Saved on this device and applied to every menu.</SheetDescription>

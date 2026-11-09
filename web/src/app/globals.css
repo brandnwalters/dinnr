@@ -24,6 +24,10 @@
   /* Minimum tap target (~44px) and the phone tab bar's height. */
   --spacing-tap: 2.75rem;
   --spacing-tab-bar: 4rem;
+  /* Bottom padding that keeps the main area clear of the phone tab bar. */
+  --spacing-tab-bar-clearance: calc(var(--spacing-tab-bar) + var(--spacing) * 4);
+  /* The tallest a bottom sheet grows (filters, nutrition) before it scrolls. */
+  --spacing-sheet: 85dvh;
   /*
    * The sticky app header's height: pinned station headers sit just below it
    * and station deep links scroll to it. This is the banner-less height for the
@@ -44,6 +48,7 @@
   --color-status-closed: var(--status-closed);
   --color-status-closed-foreground: var(--status-closed-foreground);
   --color-warning: var(--warning);
+  --color-overlay: var(--overlay);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -107,6 +112,8 @@
   --status-closed-foreground: oklch(0.205 0 0);
   /* Cautionary notes, such as the allergen disclaimer. */
   --warning: oklch(0.56 0.15 50);
+  /* The dimmed backdrop behind sheets and dialogs. */
+  --overlay: oklch(0 0 0 / 10%);
 }
 
 /* Dark values for every token above (the radius is shared). */
@@ -143,6 +150,7 @@
   --status-closed: oklch(0.32 0 0);
   --status-closed-foreground: oklch(0.87 0 0);
   --warning: oklch(0.75 0.15 60);
+  --overlay: oklch(0 0 0 / 50%);
 }
 
 @layer base {
