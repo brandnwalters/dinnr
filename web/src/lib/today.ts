@@ -1,5 +1,6 @@
 import { isAllergen, type Allergen } from "./allergens";
 import { query } from "./db";
+import { withSelectedMeal } from "./meal-periods";
 import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
 
 /**
@@ -256,18 +257,16 @@ export async function getToday({
     date,
     halls: [...halls.values()].map(({ slug, name, menuStatus, mealPeriods }) => {
       const { status, current } = currentMeal(menuStatus, mealPeriods, time);
-      const selected = mealPeriods.some((mp) => mp.name === requested) ? requested! : current;
-      const selectedFavorites = mealPeriods.find((mp) => mp.name === selected)?.favorites ?? [];
-      const favoriteCount = new Set(selectedFavorites.map(({ item }) => item.normalizedName)).size;
-      return {
+      const hall: Hall = {
         slug,
         name,
         status,
         currentMealPeriod: current,
-        selectedMealPeriod: selected,
-        favoriteCount,
+        selectedMealPeriod: current,
+        favoriteCount: 0,
         mealPeriods,
       };
+      return withSelectedMeal(hall, requested);
     }),
   };
 }
