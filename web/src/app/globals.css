@@ -156,21 +156,3 @@
     @apply font-sans;
   }
 }
-
-/* Legacy classes still used by the old Today content (retired as screens are rebuilt). */
-
-.dietary-tags {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: --spacing(1);
-  margin-left: --spacing(2);
-  list-style: none;
-}
-
-.dietary-tag {
-  padding: 0 --spacing(1.5);
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  font-size: var(--text-xs);
-  opacity: 0.8;
-}

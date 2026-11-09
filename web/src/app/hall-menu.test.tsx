@@ -1,5 +1,5 @@
-// UI smoke tests: the menu list shows calories and protein (and copes without
-// nutrition), dietary tag badges on menu items, and favorites at the top of the list.
+// UI smoke tests: compact dish rows (name, abbreviated diet chips, calories and
+// protein, star; coping without nutrition) and favorites at the top of the list.
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import type { MenuItem } from "@/lib/today";
@@ -61,16 +61,46 @@ test("each item shows its calories and protein; items without nutrition still re
   expect(html).not.toContain("undefined");
 });
 
-test("items show their dietary tags as badges", () => {
+/** The markup of the station row for `recipeId`, up to the next dish's row. */
+function row(html: string, recipeId: number): string {
+  const station = html.slice(html.indexOf("<h4>The Grill</h4>"));
+  const start = station.indexOf(`data-recipe="${recipeId}"`);
+  const end = station.indexOf("data-recipe=", start + 1);
+  return station.slice(start, end === -1 ? undefined : end);
+}
+
+test("items show their dietary tags as abbreviated chips labelled with the full tag name", () => {
   const html = renderGrill([
-    { name: "Black Bean Burger Patty", recipeId: 5810, dietaryTags: ["vegan", "made_without_gluten"] },
+    { name: "Black Bean Burger Patty", recipeId: 5810, dietaryTags: ["vegan", "made_without_gluten", "plant_forward"] },
     { name: "Nashville Hot Chicken Biscuit", recipeId: 15469, dietaryTags: [] },
   ]);
 
-  const burger = html.slice(html.indexOf("Black Bean"), html.indexOf("Nashville"));
-  expect(burger).toContain("Vegan");
-  expect(burger).toContain("Made Without Gluten");
-  expect(html.slice(html.indexOf("Nashville"))).not.toContain("Vegan");
+  const burger = row(html, 5810);
+  expect(burger).toMatch(/aria-label="Vegan"[^>]*>VG</);
+  expect(burger).toMatch(/aria-label="Made Without Gluten"[^>]*>GF</);
+  expect(burger).toMatch(/aria-label="Plant forward"[^>]*>PF</);
+  expect(row(html, 15469)).not.toContain("Dietary tags");
+});
+
+test("a compact row reads name, chips, calories and protein, then the star on the far right", () => {
+  const html = renderGrill([
+    { name: "Chicken Breast", recipeId: 13708, dietaryTags: ["halal"], nutrition: nutrition(140, 25) },
+  ]);
+
+  const chicken = row(html, 13708);
+  const order = [">Chicken Breast<", ">H<", "140 cal", "25 g protein", 'aria-label="Star Chicken Breast"'];
+  const positions = order.map((text) => chicken.indexOf(text));
+  expect(positions.every((p) => p >= 0)).toBe(true);
+  expect(positions).toEqual([...positions].sort((a, b) => a - b));
+});
+
+test("a row without nutrition shows no macros at all", () => {
+  const html = renderGrill([{ name: "Mystery Special", recipeId: 99999, dietaryTags: [] }]);
+
+  const mystery = row(html, 99999);
+  expect(mystery).toContain("Mystery Special");
+  expect(mystery).not.toMatch(/ cal\b|protein/);
+  expect(mystery).not.toContain("null");
 });
 
 test("favorites are highlighted, each item has a star toggle, and the hall shows its favorite count", () => {
@@ -87,6 +117,9 @@ test("favorites are highlighted, each item has a star toggle, and the hall shows
   expect(chicken).toContain('data-favorite="true"');
   expect(chicken).toContain('aria-pressed="true"');
   expect(chicken).toContain("Unstar Grilled Chicken Breast");
+  // Highlighted in place within its station too.
+  expect(row(html, 13708)).toContain('data-favorite="true"');
+  expect(row(html, 13708)).toContain("Unstar Grilled Chicken Breast");
   const biscuit = html.slice(html.indexOf('data-recipe="15469"'));
   expect(biscuit).not.toContain("data-favorite");
   expect(biscuit).toContain("Star Nashville Hot Chicken Biscuit");
