@@ -1,8 +1,8 @@
 // Macro targets (combos, #13) in the on-device preferences store, against an in-memory localStorage.
 import { expect, test } from "vitest";
-import { parsePreferences } from "./preferences";
+import { parsePreferences, PREFERENCES_STORAGE_KEY } from "./preferences";
 import { memoryStorage } from "../../test/memory-storage";
-import { createPreferencesStore, PREFERENCES_STORAGE_KEY } from "./preferences-store";
+import { createPreferencesStore } from "./preferences-store";
 
 test("no targets are set by default", () => {
   expect(createPreferencesStore(memoryStorage()).get().macroTargets).toEqual({});
