@@ -152,7 +152,7 @@ The UI gets light smoke tests on top of these.
 
 ## Run it locally
 
-Prerequisites: Docker, [`uv`](https://docs.astral.sh/uv/), Node 20+, `pnpm`.
+Prerequisites: Docker, [`uv`](https://docs.astral.sh/uv/), Node 24, `pnpm` 12.
 
 ```sh
 docker compose up -d --wait          # Postgres 17 on localhost:5432 (user/password/db: dinnr)
