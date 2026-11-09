@@ -1,11 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { DietaryTagBadges } from "./dietary-tag-badges";
+import { DietChips } from "./diet-chips";
 import { FavoriteButton, FavoriteCount } from "./favorite-button";
 import { NutritionSheet } from "./nutrition-sheet";
 import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
+import { cn } from "@/lib/utils";
 
-/** "140 cal · 25 g protein", leaving out whatever the label doesn't give. */
+/**
+ * "140 cal" over "25 g protein", muted and right-aligned, leaving out whatever
+ * the label doesn't give (and rendering nothing without nutrition).
+ */
 function MacroSummary({ item }: { item: MenuItem }) {
   const { calories, proteinG } = item.nutrition ?? {};
   const parts = [
@@ -13,7 +17,13 @@ function MacroSummary({ item }: { item: MenuItem }) {
     proteinG != null ? `${proteinG} g protein` : null,
   ].filter((part) => part !== null);
   if (parts.length === 0) return null;
-  return <small> {parts.join(" · ")}</small>;
+  return (
+    <small className="flex shrink-0 flex-col text-right text-xs leading-tight text-muted-foreground tabular-nums">
+      {parts.map((part) => (
+        <span key={part}>{part}</span>
+      ))}
+    </small>
+  );
 }
 
 /** "17:00" -> "5pm", "10:30" -> "10:30am". */
@@ -53,7 +63,12 @@ function statusText(hall: Hall): string {
   }
 }
 
-/** One dish in the list: star, name (opens its nutrition), `children`, badges and macros. */
+/**
+ * One dish as a compact line (at least a tap target tall): the name (opens its
+ * nutrition; wraps, never truncated), `children`, abbreviated diet chips, then
+ * calories and protein right-aligned, and the star on the far right.
+ * Favorites are tinted with the brand accent wherever they appear.
+ */
 function ItemRow({
   item,
   onToggleFavorite,
@@ -64,12 +79,21 @@ function ItemRow({
   children?: ReactNode;
 }) {
   return (
-    <li data-recipe={item.recipeId} data-favorite={item.favorite ? "true" : undefined}>
-      <FavoriteButton item={item} onToggle={onToggleFavorite} />{" "}
-      <NutritionSheet item={item} onToggleFavorite={onToggleFavorite} />
-      {children}
-      <DietaryTagBadges tags={item.dietaryTags} />
+    <li
+      data-recipe={item.recipeId}
+      data-favorite={item.favorite ? "true" : undefined}
+      className={cn(
+        "flex min-h-tap items-center gap-2 rounded-md border-b border-border/60 py-0.5 pl-2 last:border-b-0",
+        item.favorite && "bg-brand/10",
+      )}
+    >
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 py-1 text-sm break-words">
+        <NutritionSheet item={item} onToggleFavorite={onToggleFavorite} />
+        {children}
+        <DietChips tags={item.dietaryTags} />
+      </div>
       <MacroSummary item={item} />
+      <FavoriteButton item={item} onToggle={onToggleFavorite} />
     </li>
   );
 }

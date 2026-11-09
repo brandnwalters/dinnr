@@ -36,6 +36,25 @@ test("labels the two groups", () => {
   expect(html).toContain("Hide items containing");
 });
 
+test("has a legend explaining every diet tag abbreviation used on the menus", () => {
+  const html = renderToStaticMarkup(<FilterOptions dietFilters={[]} allergens={[]} />);
+  const legend = html.slice(html.indexOf("Menu abbreviations"));
+
+  for (const [abbreviation, label] of [
+    ["VG", "Vegan"],
+    ["V", "Vegetarian"],
+    ["H", "Halal"],
+    ["GF", "Made Without Gluten"],
+    ["SC", "Smart Choice"],
+    ["L", "Local"],
+    ["O", "Organic"],
+    ["SS", "Sustainable Seafood"],
+    ["CF", "Coolfood"],
+  ]) {
+    expect(legend).toMatch(new RegExp(`<dt[^>]*>${abbreviation}</dt><dd[^>]*>${label}</dd>`));
+  }
+});
+
 test("shows the allergen disclaimer while an allergen filter is on", () => {
   const html = renderToStaticMarkup(<FilterOptions dietFilters={[]} allergens={["sesame"]} />);
   expect(html).toContain('role="note"');
