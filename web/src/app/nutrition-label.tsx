@@ -1,5 +1,5 @@
 import type { NutritionDetail } from "@/lib/nutrition-detail";
-import styles from "./nutrition-panel.module.css";
+import { cn } from "@/lib/utils";
 
 const amount = (value: number | null, unit: string) => (value == null ? "–" : `${value} ${unit}`);
 
@@ -24,20 +24,20 @@ export function NutritionLabel({ detail }: { detail: NutritionDetail | null }) {
 
   return (
     <>
-      <p>Serving size {detail.servingSize ?? "–"}</p>
-      <table className={styles.label}>
+      <p className="mb-2 text-muted-foreground">Serving size {detail.servingSize ?? "–"}</p>
+      <table className="w-full border-collapse">
         <tbody>
           {rows.map(([label, value, indent]) => (
-            <tr key={label}>
-              <th scope="row" className={indent ? styles.indent : undefined}>
+            <tr key={label} className="border-b">
+              <th scope="row" className={cn("py-1 text-left font-normal", indent && "pl-4")}>
                 {label}
               </th>
-              <td>{value}</td>
+              <td className="py-1 text-right">{value}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <h4>Ingredients</h4>
+      <h3 className="mt-4 font-medium">Ingredients</h3>
       <p>{detail.ingredients ?? "No ingredient list given."}</p>
     </>
   );

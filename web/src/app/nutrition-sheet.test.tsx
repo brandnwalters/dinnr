@@ -1,4 +1,4 @@
-// UI smoke test: menu items open their nutrition panel.
+// UI smoke test: each dish name opens its nutrition sheet.
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import { HallMenu } from "./hall-menu";
