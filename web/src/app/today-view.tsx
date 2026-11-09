@@ -1,46 +1,32 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { ALLERGENS } from "@/lib/allergens";
 import { DIETARY_TAGS } from "@/lib/dietary-tags";
 import { toggleFavorite } from "@/lib/favorites";
-import { todayQueryPreferences } from "@/lib/preferences";
+import { withSelectedMeal } from "@/lib/meal-periods";
 import { usePreferences } from "@/lib/preferences-store";
-import type { TodayMenu } from "@/lib/today";
-import { loadToday } from "./actions";
 import { AllergenDisclaimer } from "./allergen-disclaimer";
 import { CheckboxFilters } from "./checkbox-filters";
 import { HallMenu } from "./hall-menu";
 import { MacroCombos } from "./macro-combos";
+import { MenuSkeleton } from "./menu-skeleton";
+import { useTodayMenu } from "./today-menu-provider";
 
 /**
- * The home page body. Preferences live on the device, so the menus are loaded
- * from the browser (through `loadToday`) once they've been read, and again
- * whenever the selected meal (`?meal=Dinner`, set by each hall's meal
- * switcher) or a preference the server query reads (`todayQueryPreferences`:
- * filters, favorites) changes. Nothing is shown before then, so filtered-out items never
- * flash on screen.
+ * The home page body, filled from the menus the app shell loaded
+ * (`useTodayMenu`). The selected meal (`?meal=Dinner`, set by each hall's
+ * meal switcher) switches every hall that serves it today; the others keep
+ * their current meal. Skeletons show until preferences are read and the menus
+ * have loaded, so filtered-out items never flash on screen.
  */
 export function TodayView() {
   const [preferences, updatePreferences] = usePreferences();
-  const meal = useSearchParams().get("meal") ?? undefined; // switches every hall that serves it today
-  const [today, setToday] = useState<TodayMenu | null>(null);
+  const meal = useSearchParams().get("meal"); // switches every hall that serves it today
+  const today = useTodayMenu();
+  const halls = today?.halls.map((hall) => withSelectedMeal(hall, meal));
 
-  // Only the fields the server query reads trigger a reload (not e.g. typing macro targets).
-  const queryKey = preferences ? JSON.stringify(todayQueryPreferences(preferences)) : null;
-  useEffect(() => {
-    if (queryKey === null) return;
-    let current = true;
-    loadToday(JSON.parse(queryKey), meal).then((menu) => {
-      if (current) setToday(menu);
-    });
-    return () => {
-      current = false;
-    };
-  }, [queryKey, meal]);
-
-  if (!preferences) return <p>Loading today&apos;s menus…</p>;
+  if (!preferences) return <MenuSkeleton />;
   return (
     <>
       {/* Strict cutoffs: an item must carry every checked diet tag, and none of the checked allergens. */}
@@ -59,13 +45,13 @@ export function TodayView() {
         onChange={(allergens) => updatePreferences((p) => ({ ...p, allergens }))}
       />
       <AllergenDisclaimer allergens={preferences.allergens} />
-      {today === null ? (
-        <p>Loading today&apos;s menus…</p>
+      {!halls ? (
+        <MenuSkeleton />
       ) : (
         // One column per hall from tablet width up, stacked on narrow screens.
         <>
           <div className="mt-4 grid grid-cols-1 gap-6 md:grid-flow-col md:auto-cols-fr md:grid-cols-none">
-            {today.halls.map((hall) => (
+            {halls.map((hall) => (
               <HallMenu
                 key={hall.slug}
                 hall={hall}
@@ -76,7 +62,7 @@ export function TodayView() {
             ))}
           </div>
           <MacroCombos
-            halls={today.halls}
+            halls={halls}
             targets={preferences.macroTargets}
             onTargetsChange={(macroTargets) => updatePreferences((p) => ({ ...p, macroTargets }))}
             includeExcludedStations={preferences.includeExcludedStations}

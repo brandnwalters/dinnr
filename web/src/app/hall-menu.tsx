@@ -27,6 +27,16 @@ function hours(mealPeriod: MealPeriod): string | null {
   return mealPeriod.start && mealPeriod.end ? `${clock(mealPeriod.start)}–${clock(mealPeriod.end)}` : null;
 }
 
+/** The hall's name (an h2 with id `headingId`) and status line, e.g. "Open now: Lunch until 2:30pm". */
+export function HallMenuHeader({ hall, headingId }: { hall: Hall; headingId: string }) {
+  return (
+    <>
+      <h2 id={headingId}>{hall.name}</h2>
+      <p data-status={hall.status}>{statusText(hall)}</p>
+    </>
+  );
+}
+
 function statusText(hall: Hall): string {
   const current = hall.mealPeriods.find((mp) => mp.name === hall.currentMealPeriod);
   switch (hall.status) {
@@ -65,9 +75,53 @@ function ItemRow({
 }
 
 /**
+ * One meal period's menu: its name and hours, the user's favorites first
+ * ("Your favorites", each with its station), then every station in page order.
+ */
+export function MealPeriodMenu({
+  mealPeriod,
+  onToggleFavorite,
+}: {
+  mealPeriod: MealPeriod;
+  /** Star / unstar a dish (by its normalized name). */
+  onToggleFavorite?: (item: MenuItem) => void;
+}) {
+  return (
+    <section>
+      <h3>
+        {mealPeriod.name}
+        {hours(mealPeriod) && ` · ${hours(mealPeriod)}`}
+      </h3>
+      {mealPeriod.stations.length === 0 && <p>No items match your filters.</p>}
+      {mealPeriod.favorites.length > 0 && (
+        <section className="favorites-group">
+          <h4>Your favorites</h4>
+          <ul>
+            {mealPeriod.favorites.map(({ station, item }) => (
+              <ItemRow key={`${station}:${item.recipeId}`} item={item} onToggleFavorite={onToggleFavorite}>
+                <small className="favorite-station"> · {station}</small>
+              </ItemRow>
+            ))}
+          </ul>
+        </section>
+      )}
+      {mealPeriod.stations.map((station) => (
+        <section key={station.name}>
+          <h4>{station.name}</h4>
+          <ul>
+            {station.items.map((item) => (
+              <ItemRow key={item.recipeId} item={item} onToggleFavorite={onToggleFavorite} />
+            ))}
+          </ul>
+        </section>
+      ))}
+    </section>
+  );
+}
+
+/**
  * One hall's status, a switcher for today's meal periods, and the selected
- * meal's menu: the user's favorites first ("Your favorites", each with its
- * station), then every station in page order.
+ * meal's menu (`MealPeriodMenu`).
  */
 export function HallMenu({
   hall,
@@ -80,8 +134,7 @@ export function HallMenu({
   const selected = hall.mealPeriods.find((mp) => mp.name === hall.selectedMealPeriod);
   return (
     <section aria-labelledby={`hall-${hall.slug}`}>
-      <h2 id={`hall-${hall.slug}`}>{hall.name}</h2>
-      <p data-status={hall.status}>{statusText(hall)}</p>
+      <HallMenuHeader hall={hall} headingId={`hall-${hall.slug}`} />
       <FavoriteCount count={hall.favoriteCount} />
 
       {hall.mealPeriods.length > 0 && (
@@ -102,37 +155,7 @@ export function HallMenu({
         </nav>
       )}
 
-      {selected && (
-        <section>
-          <h3>
-            {selected.name}
-            {hours(selected) && ` · ${hours(selected)}`}
-          </h3>
-          {selected.stations.length === 0 && <p>No items match your filters.</p>}
-          {selected.favorites.length > 0 && (
-            <section className="favorites-group">
-              <h4>Your favorites</h4>
-              <ul>
-                {selected.favorites.map(({ station, item }) => (
-                  <ItemRow key={`${station}:${item.recipeId}`} item={item} onToggleFavorite={onToggleFavorite}>
-                    <small className="favorite-station"> · {station}</small>
-                  </ItemRow>
-                ))}
-              </ul>
-            </section>
-          )}
-          {selected.stations.map((station) => (
-            <section key={station.name}>
-              <h4>{station.name}</h4>
-              <ul>
-                {station.items.map((item) => (
-                  <ItemRow key={item.recipeId} item={item} onToggleFavorite={onToggleFavorite} />
-                ))}
-              </ul>
-            </section>
-          ))}
-        </section>
-      )}
+      {selected && <MealPeriodMenu mealPeriod={selected} onToggleFavorite={onToggleFavorite} />}
     </section>
   );
 }

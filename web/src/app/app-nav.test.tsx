@@ -31,13 +31,18 @@ test("Today is current on the home page", () => {
   expect(tabTag(html, "Me")).not.toContain("aria-current");
 });
 
-test("Menus and Combos are disabled: no link, announced as unavailable", () => {
+test("Menus links to /menus and is current there", () => {
+  const html = renderToStaticMarkup(<AppNav pathname="/menus" />);
+  expect(tabTag(html, "Menus")).toContain('href="/menus"');
+  expect(tabTag(html, "Menus")).toContain('aria-current="page"');
+  expect(html.match(/aria-current/g)).toHaveLength(1);
+});
+
+test("Combos is disabled: no link, announced as unavailable", () => {
   const html = renderToStaticMarkup(<AppNav pathname="/" />);
-  for (const label of ["Menus", "Combos"]) {
-    const tag = tabTag(html, label);
-    expect(tag).toContain('aria-disabled="true"');
-    expect(tag).not.toContain("href");
-  }
+  const tag = tabTag(html, "Combos");
+  expect(tag).toContain('aria-disabled="true"');
+  expect(tag).not.toContain("href");
   expect(html).toContain("coming soon");
 });
 
