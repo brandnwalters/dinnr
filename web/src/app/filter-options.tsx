@@ -1,12 +1,15 @@
 import { SlidersHorizontal } from "lucide-react";
+import { Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { ALLERGENS, type Allergen } from "@/lib/allergens";
 import { DIETARY_TAGS, type DietaryTag } from "@/lib/dietary-tags";
 import { AllergenDisclaimer } from "./allergen-disclaimer";
+import { DIET_CHIP_CLASS } from "./diet-chips";
 
 /**
- * The filter sheet's contents: one toggle chip per diet tag and allergen.
+ * The filter sheet's contents: one toggle chip per diet tag and allergen, and
+ * a legend of the diet abbreviations the menu rows use.
  * Strict cutoffs: an item must carry every pressed diet tag, and none of the
  * pressed allergens. The allergen disclaimer shows while any allergen is
  * pressed. Presentational, so it renders to static markup in tests;
@@ -38,7 +41,27 @@ export function FilterOptions({
         onChange={onAllergensChange}
       />
       <AllergenDisclaimer allergens={allergens} />
+      <AbbreviationLegend />
     </div>
+  );
+}
+
+/** What each diet chip on the menu rows stands for ("VG Vegan"), so students can read the rows. */
+function AbbreviationLegend() {
+  return (
+    <section aria-labelledby="diet-abbreviations">
+      <h3 id="diet-abbreviations" className="mb-2 text-sm font-medium">
+        Menu abbreviations
+      </h3>
+      <dl className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1 text-sm sm:grid-cols-[auto_1fr_auto_1fr]">
+        {DIETARY_TAGS.map(({ code, label, abbreviation }) => (
+          <Fragment key={code}>
+            <dt className={DIET_CHIP_CLASS}>{abbreviation}</dt>
+            <dd>{label}</dd>
+          </Fragment>
+        ))}
+      </dl>
+    </section>
   );
 }
 
