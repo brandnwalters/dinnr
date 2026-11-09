@@ -10,11 +10,13 @@
  * - `--brand` is the single accent (Carolina blue). Primary, ring and the
  *   active-tab highlight all point at it, so swapping the accent is one edit.
  * - Status colors: serving (green), opens later (amber), closed / no menu (gray).
- * - Light values only for now; dark values arrive with the Appearance setting.
- *   shadcn's `dark:` variant is kept so its components are ready for them.
+ * - Every token has a light value (`:root`) and a dark value
+ *   (`[data-theme="dark"]`). The Appearance setting picks one by setting
+ *   `data-theme` on `<html>` (see `lib/theme.ts`); shadcn's `dark:` variant
+ *   follows the same attribute.
  */
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
   /* Spacing scale: every `p-*`, `gap-*`, `h-*` step is a multiple of this. */
@@ -99,6 +101,42 @@
   --status-closed-foreground: oklch(0.205 0 0);
   /* Cautionary notes, such as the allergen disclaimer. */
   --warning: oklch(0.56 0.15 50);
+}
+
+/* Dark values for every token above (the radius is shared). */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Carolina blue, a touch lighter so it holds up on the dark background. */
+  --brand: oklch(0.72 0.11 240);
+  --brand-foreground: oklch(0.145 0 0);
+
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--brand);
+
+  --status-serving: oklch(0.52 0.13 150);
+  --status-serving-foreground: oklch(0.985 0 0);
+  --status-opens-later: oklch(0.72 0.15 70);
+  --status-opens-later-foreground: oklch(0.145 0 0);
+  --status-closed: oklch(0.32 0 0);
+  --status-closed-foreground: oklch(0.87 0 0);
+  --warning: oklch(0.75 0.15 60);
 }
 
 @layer base {

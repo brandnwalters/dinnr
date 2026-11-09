@@ -4,7 +4,7 @@ import { removeFavorite } from "@/lib/favorites";
 import { usePreferences } from "@/lib/preferences-store";
 import { MeScreen } from "./me-screen";
 
-/** Favorites live on the device, so the Me screen is filled in the browser. */
+/** Favorites and the theme live on the device, so the Me screen is filled in the browser. */
 export function MeView() {
   const [preferences, updatePreferences] = usePreferences();
   if (!preferences) return <p className="text-sm text-muted-foreground">Loading your favorites…</p>;
@@ -14,6 +14,8 @@ export function MeView() {
       onRemoveFavorite={(normalizedName) =>
         updatePreferences((p) => ({ ...p, favorites: removeFavorite(p.favorites, normalizedName) }))
       }
+      theme={preferences.theme}
+      onThemeChange={(theme) => updatePreferences((p) => ({ ...p, theme }))}
     />
   );
 }
