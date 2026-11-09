@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Link from "next/link";
+import { THEME_SCRIPT } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { CurrentAppNav } from "./current-app-nav";
 import { AllergenBanner, FilterSheet } from "./filter-sheet";
+import { ThemeSync } from "./theme-sync";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -18,11 +20,19 @@ export const metadata: Metadata = {
  * the main navigation (a bottom tab bar on phones, in the header from tablet
  * width up) and the filter button, plus the allergen disclaimer banner while an
  * allergen filter is on. The main area leaves room for the fixed tab bar on phones.
+ *
+ * The inline script in `<head>` applies the Appearance choice before the
+ * first paint (no flash of the wrong theme); it sets `data-theme` on
+ * `<html>`, hence `suppressHydrationWarning`.
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-dvh">
+        <ThemeSync />
         <header className="sticky top-0 z-10 border-b bg-background">
           <div className="mx-auto flex min-h-tap max-w-6xl items-center justify-between gap-4 px-4 py-2">
             <Link href="/" className="text-xl font-bold tracking-tight">
