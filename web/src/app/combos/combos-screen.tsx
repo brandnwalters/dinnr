@@ -44,7 +44,7 @@ export function CombosScreen({
   onClearFilters?: () => void;
 }) {
   const meal = selectedMealPeriod(halls, query.meal);
-  const hall = selectedHall(halls, query.hall);
+  const hall = selectedHall(halls, query.hall, meal);
   return (
     <div className="flex flex-col gap-4">
       <HallSwitchers halls={halls} query={query} meal={meal} hall={hall} />

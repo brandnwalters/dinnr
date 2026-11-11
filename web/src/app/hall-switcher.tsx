@@ -32,7 +32,19 @@ export function HallSwitcher({
   );
 }
 
-/** The hall `?hall=` names (by slug), else the first hall. */
-export function selectedHall(halls: readonly Pick<Hall, "slug">[], requested: string | null | undefined): string | null {
-  return halls.find((hall) => hall.slug === requested)?.slug ?? halls[0]?.slug ?? null;
+/**
+ * The hall `?hall=` names (by slug), else the first hall serving `meal` (the
+ * selected meal period), else the first hall.
+ */
+export function selectedHall(
+  halls: readonly Pick<Hall, "slug" | "mealPeriods">[],
+  requested: string | null | undefined,
+  meal: string | null,
+): string | null {
+  return (
+    halls.find((hall) => hall.slug === requested)?.slug ??
+    halls.find((hall) => hall.mealPeriods.some((mp) => mp.name === meal))?.slug ??
+    halls[0]?.slug ??
+    null
+  );
 }

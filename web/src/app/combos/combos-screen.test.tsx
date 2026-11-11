@@ -203,6 +203,15 @@ test("the hall switcher selects ?hall=, the first hall by default, keeping ?meal
   expect(optionTag(html, "Dining hall", "Top of Lenoir")).toContain('href="?hall=top-of-lenoir&amp;meal=Dinner"');
 });
 
+test("without ?hall=, phones open the first hall serving the selected meal period, like Menus", () => {
+  const [lenoir, chase] = HALLS;
+  const dinnerOnly = { ...lenoir, mealPeriods: lenoir.mealPeriods.filter((mp) => mp.name === "Dinner") };
+  const html = render({ proteinG: { min: 30 } }, { halls: [dinnerOnly, chase], query: { meal: "Lunch" } });
+
+  expect(optionTag(html, "Dining hall", "Chase")).toContain('aria-current="true"');
+  expect(html).toMatch(/<section(?![^>]*hidden)[^>]*aria-labelledby="combos-hall-chase"/);
+});
+
 test("the allergen disclaimer shows only when an allergen filter is on", () => {
   const disclaimer = /Allergen filters are not a guarantee/;
 

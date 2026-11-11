@@ -97,6 +97,16 @@ test("a hall switcher selects the hall from ?hall=, the first hall by default, k
   expect(optionTag(html, "Dining hall", "Top of Lenoir")).toContain('href="?hall=top-of-lenoir&amp;meal=Dinner"');
 });
 
+test("without ?hall=, phones open the first hall serving the selected meal period; ?hall= still wins", () => {
+  const html = render({ meal: "Late Lunch" });
+  expect(optionTag(html, "Dining hall", "Chase")).toContain('aria-current="true"');
+  expect(optionTag(html, "Dining hall", "Top of Lenoir")).not.toContain("aria-current");
+  expect(html).toMatch(/<section(?![^>]*hidden)[^>]*aria-labelledby="menus-hall-chase"/);
+  expect(optionTag(render({ meal: "Late Lunch", hall: "top-of-lenoir" }), "Dining hall", "Top of Lenoir")).toContain(
+    'aria-current="true"',
+  );
+});
+
 test("each hall's favorites, with their stations, come before its first station", () => {
   const html = render();
   const lenoirColumn = column(html, "Top of Lenoir");
