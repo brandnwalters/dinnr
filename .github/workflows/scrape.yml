@@ -14,13 +14,13 @@ on:
     # before it opens. That margin also absorbs GitHub's scheduled-run delays
     # (often 10-30+ min at busy times). It is also well after midnight Eastern,
     # so the scraper's "today" (America/New_York) is the day being served.
-    - cron: "30 9 * * *"
+    - cron: "30 09 * * *"
     # Midday re-scrape, to pick up menu changes made during the day (e.g. dinner swaps):
     #   17:00 UTC = 12:00 EST (Nov-Mar) = 13:00 EDT (Mar-Nov)
     # Both fall during lunch and 4-5 h before dinner opens at 5pm, so even a
     # delayed run lands well before dinner. Re-running the same day updates that
     # day's menu in place (no duplicates; added items appear, removed ones go).
-    - cron: "0 17 * * *"
+    - cron: "00 17 * * *"
   workflow_dispatch:
 
 # Never run two scrapes at once against the same database.

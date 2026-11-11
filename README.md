@@ -74,6 +74,7 @@ fetcher does HTTP, and the parsers are pure functions:
 | `archive.py` | Saves every fetched response gzipped, by location and run time, so past days can be re-parsed after a parser bug fix. |
 | `run.py` | Orchestration, per hall: fetch → parse → save the menu → fetch missing or stale nutrition → health checks. A failing hall doesn't stop the others; the run fails at the end, naming each hall and why. |
 | `cli.py` / `migrate.py` | The `dinnr-scrape` and `dinnr-migrate` entry points. |
+| `check_today.py` | The `dinnr-check-today` entry point: fails, naming each hall, if any hall has no menu day saved for today. Runs mid-morning in CI to catch a scrape that never ran. |
 
 ### Schema
 

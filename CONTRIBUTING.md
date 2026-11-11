@@ -2,7 +2,7 @@
 
 ## Layout
 
-- `scraper/`: Python package (managed with `uv`). Entry points `dinnr-scrape` and `dinnr-migrate`.
+- `scraper/`: Python package (managed with `uv`). Entry points `dinnr-scrape`, `dinnr-migrate` and `dinnr-check-today`.
 - `migrations/`: plain SQL migrations, `NNNN_description.sql`, applied in filename order. The Python
   side owns them; the schema is the contract between scraper and web app. Never edit an applied
   migration: add a new one.

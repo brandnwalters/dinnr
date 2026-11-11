@@ -186,6 +186,15 @@ def open_day_item_counts(conn: psycopg.Connection, location: Location, start: da
     return dict(rows.fetchall())
 
 
+def slugs_with_menu_day(conn: psycopg.Connection, day: date) -> set[str]:
+    """Slugs of the locations with a saved menu day (open or closed) for `day`."""
+    rows = conn.execute(
+        "select l.slug from menu_day md join location l on l.id = md.location_id where md.date = %s",
+        (day,),
+    )
+    return {row[0] for row in rows}
+
+
 def nutrition_fetched_at(conn: psycopg.Connection, recipe_ids: Iterable[int]) -> dict[int, datetime]:
     """When each of `recipe_ids` last had its nutrition saved (ids never saved are absent)."""
     rows = conn.execute(

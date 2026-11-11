@@ -3,6 +3,8 @@
 ```
 GitHub Actions (cron, .github/workflows/scrape.yml)
   dinnr-migrate, then dinnr-scrape  ──writes──▶  Neon Postgres  ◀──reads──  Next.js app on Vercel (web/)
+GitHub Actions (cron, .github/workflows/scrape-check.yml)
+  dinnr-check-today  ─────────────────reads──▶  Neon Postgres
 ```
 
 - **Database**: one Neon Postgres database. The scraper owns the schema: every workflow run applies
@@ -83,8 +85,27 @@ page is empty, check the latest **scrape** run succeeded today. (Per-deployment 
 - To run migrations or the scraper against Neon from your machine:
   `cd scraper && uv run dinnr-migrate --database-url "$NEON_URL"` (same for `dinnr-scrape`). This
   hits the live UNC site through the polite fetcher; don't loop it.
-- GitHub disables scheduled workflows after 60 days without repository activity. If the menu stops
-  updating, check the Actions tab and re-enable the workflow.
+- **Missed-scrape check**: `.github/workflows/scrape-check.yml` runs `dinnr-check-today` at 14:15 UTC
+  (09:15 EST / 10:15 EDT). It fails, naming each hall, if any hall has no menu day saved for today
+  (America/New_York), and GitHub emails the owner about the failed run (strictly, whoever last
+  edited the workflow's `cron:` lines). A failing check means the morning scrape didn't run or
+  didn't save; a failing **scrape** run gets its own email. The check is a scheduled workflow too, so
+  the causes below can silence it as well: after a re-enable or re-registration, confirm both
+  workflows get a `schedule` run.
+- **Scheduled scrape never fires.** Check `gh run list --workflow scrape.yml --repo
+  brandnwalters/dinnr`: no runs with event `schedule`, only `workflow_dispatch`, means the schedule
+  isn't running. Two known causes:
+  - *Disabled after 60 days without repository activity.* The workflow shows as disabled in the
+    Actions tab (`gh workflow list --all`). Re-enable it there or with `gh workflow enable scrape.yml` (and `scrape-check.yml`).
+  - *Schedule never registered.* The workflow is `active` on `main` and everything else checks out,
+    but the `cron:` slots never fire. GitHub has silently failed to pick up the schedule (this
+    happened when the workflow first reached `main`, Nov 2026). Push a commit to `main` that
+    changes the text of the `cron:` lines of `scrape.yml` (e.g. `"0 17 * * *"` ↔ `"00 17 * * *"`;
+    re-quoting alone may not count), or `gh workflow disable scrape.yml` then
+    `gh workflow enable scrape.yml`.
+
+  Either way, run the workflow by hand (`gh workflow run scrape.yml`) to fill in today's menu, then
+  confirm a run with event `schedule` appears at the next slot.
 - **Raw page archive**: every run saves a gzipped copy of each page it fetched, named by location and
   run time (`archive/<YYYYMMDDTHHMMSSZ>/<location-slug>.html.gz`, nutrition responses as
   `recipe-<id>.json.gz`), so past days can be re-parsed after a parser bug is fixed. Locally this goes

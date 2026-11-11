@@ -1,0 +1,51 @@
+# Missed-scrape check: fail if today's menu (America/New_York) isn't saved for
+# every hall by mid-morning. A scheduled scrape that never runs produces no
+# failed run and no email, so this separate workflow turns that silence into a
+# failure, and GitHub emails the repo owner about failed scheduled runs.
+#
+# It has its own schedule, registered apart from the scrape's, so it still
+# fires if the scrape's schedule is dropped (see docs/deploy.md). It needs the
+# same DATABASE_URL repository secret, and only reads the database.
+name: scrape-check
+
+on:
+  schedule:
+    #   14:15 UTC = 09:15 EST (Nov-Mar) = 10:15 EDT (Mar-Nov)
+    # About 4.5 h after the 09:30 UTC scrape, so even a badly delayed or
+    # long first-run scrape has finished. Off the hour, when GitHub's
+    # scheduled-run queue is busiest.
+    - cron: "15 14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: scraper
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: scraper/uv.lock
+
+      - name: Check the database secret is set
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Repository secret DATABASE_URL is not set (see docs/deploy.md)"
+            exit 1
+          fi
+
+      - name: Install scraper
+        run: uv sync --locked --no-dev
+
+      - name: Check today's menus were saved
+        run: uv run --no-dev dinnr-check-today

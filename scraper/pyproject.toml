@@ -12,6 +12,7 @@ dependencies = [
 [project.scripts]
 dinnr-scrape = "dinnr.cli:main"
 dinnr-migrate = "dinnr.migrate:main"
+dinnr-check-today = "dinnr.check_today:main"
 
 [dependency-groups]
 dev = [
