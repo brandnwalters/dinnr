@@ -8,28 +8,22 @@ a workflow run, and GitHub emails the owner, instead of leaving the app stale.
 """
 
 import argparse
-import os
 import sys
 from datetime import datetime
 
 import psycopg
 
-from dinnr.cli import DINING_TZ
-from dinnr.locations import LOCATIONS
-from dinnr.migrate import DEFAULT_DATABASE_URL
+from dinnr.locations import LOCATIONS, dining_today
+from dinnr.migrate import add_database_url_argument
 from dinnr.repository import slugs_with_menu_day
 
 
 def main(argv: list[str] | None = None, *, now: datetime | None = None) -> int:
     parser = argparse.ArgumentParser(prog="dinnr-check-today", description=__doc__)
-    parser.add_argument(
-        "--database-url",
-        default=os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL),
-        help="Postgres URL (default: $DATABASE_URL or the local Docker dev DB)",
-    )
+    add_database_url_argument(parser)
     args = parser.parse_args(argv)
 
-    today = (now or datetime.now(DINING_TZ)).astimezone(DINING_TZ).date()
+    today = dining_today(now)
     with psycopg.connect(args.database_url) as conn:
         saved = slugs_with_menu_day(conn, today)
     missing = [location.name for location in LOCATIONS if location.slug not in saved]

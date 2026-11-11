@@ -9,28 +9,21 @@ hall and why, if any hall's page fails a health check (see `dinnr.health`).
 import argparse
 import os
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import psycopg
 
 from dinnr.archive import ArchivingFetcher
 from dinnr.fetcher import Fetcher, PoliteFetcher
-from dinnr.locations import LOCATIONS
-from dinnr.migrate import DEFAULT_DATABASE_URL
+from dinnr.locations import LOCATIONS, dining_today
+from dinnr.migrate import add_database_url_argument
 from dinnr.run import ScrapeFailed, scrape
-
-DINING_TZ = ZoneInfo("America/New_York")
 
 
 def main(argv: list[str] | None = None, *, fetcher: Fetcher | None = None, now: datetime | None = None) -> int:
     parser = argparse.ArgumentParser(prog="dinnr-scrape", description=__doc__)
-    parser.add_argument(
-        "--database-url",
-        default=os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL),
-        help="Postgres URL (default: $DATABASE_URL or the local Docker dev DB)",
-    )
+    add_database_url_argument(parser)
     parser.add_argument(
         "--archive-dir",
         type=Path,
@@ -39,8 +32,8 @@ def main(argv: list[str] | None = None, *, fetcher: Fetcher | None = None, now: 
     )
     args = parser.parse_args(argv)
 
-    now = now or datetime.now(DINING_TZ)
-    today = now.astimezone(DINING_TZ).date()
+    now = now or datetime.now(UTC)
+    today = dining_today(now)
     archiving = ArchivingFetcher(fetcher or PoliteFetcher(), args.archive_dir, run_at=now, locations=LOCATIONS)
     with psycopg.connect(args.database_url) as conn:
         try:

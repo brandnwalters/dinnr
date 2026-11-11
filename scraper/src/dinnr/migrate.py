@@ -47,13 +47,18 @@ def migrate(database_url: str, migrations_dir: Path | None = None) -> list[str]:
     return applied_now
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="dinnr-migrate", description=__doc__)
+def add_database_url_argument(parser: argparse.ArgumentParser) -> None:
+    """The `--database-url` option every dinnr command takes."""
     parser.add_argument(
         "--database-url",
         default=os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL),
         help="Postgres URL (default: $DATABASE_URL or the local Docker dev DB)",
     )
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="dinnr-migrate", description=__doc__)
+    add_database_url_argument(parser)
     args = parser.parse_args(argv)
 
     applied = migrate(args.database_url)

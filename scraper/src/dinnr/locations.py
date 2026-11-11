@@ -5,6 +5,16 @@ so no hall-specific code is needed.
 """
 
 from dataclasses import dataclass
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+# Every hall is in Chapel Hill, so "today" is one date for all of them.
+DINING_TZ = ZoneInfo("America/New_York")
+
+
+def dining_today(now: datetime | None = None) -> date:
+    """The date being served at the halls at `now` (default: the current time)."""
+    return (now or datetime.now(DINING_TZ)).astimezone(DINING_TZ).date()
 
 
 @dataclass(frozen=True)
