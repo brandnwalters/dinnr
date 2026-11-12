@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { menusHref } from "@/lib/menus-link";
 import { stationPreview } from "@/lib/station-preview";
 import type { Hall, MealPeriod } from "@/lib/today";
-import { HallMenuHeader, MealPeriodHeading } from "./hall-menu";
+import { HallMenuHeader, MealPeriodHeading, StatusPill } from "./hall-menu";
 import { NotServing } from "./meal-period-switcher";
 import { allDayEmptyState, NoMatchingItems } from "./menu-empty-states";
+import { UsualHoursButton, UsualHoursSheet } from "./usual-hours-sheet";
 
 /**
  * "Your favorites here": the user's favorites in this meal period, each with
@@ -94,14 +95,24 @@ export function HallCard({
   const headingId = `today-hall-${hall.slug}`;
   return (
     <section aria-labelledby={headingId}>
-      <Card className="h-full gap-3">
-        <CardHeader>
-          <HallMenuHeader hall={hall} headingId={headingId} />
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <HallCardBody hall={hall} meal={meal} hasFavorites={hasFavorites} onClearFilters={onClearFilters} />
-        </CardContent>
-      </Card>
+      <UsualHoursSheet hall={hall}>
+        <Card className="h-full gap-3">
+          <CardHeader>
+            <HallMenuHeader
+              hall={hall}
+              headingId={headingId}
+              status={
+                <UsualHoursButton>
+                  <StatusPill hall={hall} />
+                </UsualHoursButton>
+              }
+            />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <HallCardBody hall={hall} meal={meal} hasFavorites={hasFavorites} onClearFilters={onClearFilters} />
+          </CardContent>
+        </Card>
+      </UsualHoursSheet>
     </section>
   );
 }
@@ -124,7 +135,7 @@ function HallCardBody({
   if (!mealPeriod) return meal && <NotServing mealPeriod={meal} />;
   return (
     <>
-      <MealPeriodHeading mealPeriod={mealPeriod} />
+      <MealPeriodHeading mealPeriod={mealPeriod} renderLabel={(label) => <UsualHoursButton>{label}</UsualHoursButton>} />
       {mealPeriod.stations.length === 0 ? (
         <NoMatchingItems onClearFilters={onClearFilters} />
       ) : (

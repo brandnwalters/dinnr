@@ -38,39 +38,47 @@ const STATUS_PILL_CLASS: Record<StatusTone, string> = {
 /** The hall's status (wording from `statusText`) as a pill colored by status. */
 export function StatusPill({ hall }: { hall: Hall }) {
   return (
-    <p
+    <span
       data-status={hall.status}
-      className={cn("w-fit rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_PILL_CLASS[statusTone(hall)])}
+      className={cn(
+        "block w-fit rounded-full px-2.5 py-0.5 text-xs font-medium",
+        STATUS_PILL_CLASS[statusTone(hall)],
+      )}
     >
       {statusText(hall)}
-    </p>
+    </span>
   );
 }
 
 /**
  * The hall's name (an h2 with id `headingId`) and status pill, e.g. "Open now:
- * Lunch until 2:30pm", styled like the hall cards on Today.
+ * Lunch until 2:30pm", styled like the hall cards on Today. `status` replaces
+ * the plain pill (Today wraps it in a button).
  */
-export function HallMenuHeader({ hall, headingId }: { hall: Hall; headingId: string }) {
+export function HallMenuHeader({ hall, headingId, status }: { hall: Hall; headingId: string; status?: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
       <h2 id={headingId} className="text-lg font-semibold">
         {hall.name}
       </h2>
-      <StatusPill hall={hall} />
+      {status ?? <StatusPill hall={hall} />}
     </div>
   );
 }
 
-/** A meal period's name and hours, e.g. "Lunch · 11am–2:30pm" (just the name without readable times). */
-export function MealPeriodHeading({ mealPeriod }: { mealPeriod: MealPeriod }) {
+/**
+ * A meal period's name and hours, e.g. "Lunch · 11am–2:30pm" (just the name
+ * without readable times). `renderLabel` wraps that text (Today makes it a button).
+ */
+export function MealPeriodHeading({
+  mealPeriod,
+  renderLabel = (label) => label,
+}: {
+  mealPeriod: MealPeriod;
+  renderLabel?: (label: string) => ReactNode;
+}) {
   const time = hours(mealPeriod);
-  return (
-    <h3 className="text-sm font-medium">
-      {mealPeriod.name}
-      {time && ` · ${time}`}
-    </h3>
-  );
+  return <h3 className="text-sm font-medium">{renderLabel(time ? `${mealPeriod.name} · ${time}` : mealPeriod.name)}</h3>;
 }
 
 /**

@@ -186,3 +186,12 @@ test("Today no longer renders the full menus", () => {
   expect(html).not.toMatch(/aria-label="(Star|Unstar) /);
   expect(html).not.toContain("g protein");
 });
+
+test("each card's status pill and hours line open that hall's Usual hours", () => {
+  const lenoirCard = card(render(), "Top of Lenoir");
+  const triggers = lenoirCard.match(/<button[^>]*aria-haspopup="dialog"[^>]*>.*?<\/button>/g) ?? [];
+  expect(triggers).toHaveLength(2);
+  expect(triggers[0]).toContain("Open now: Brunch until 3pm");
+  expect(triggers[1]).toContain("Brunch · 10:30am–3pm");
+  for (const trigger of triggers) expect(trigger).toContain("Usual hours for Top of Lenoir");
+});
