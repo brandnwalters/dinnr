@@ -186,7 +186,7 @@ function strip(html: string): string {
   return html.slice(html.indexOf(">", start) + 1, html.indexOf("</p>", start)).replace(/<[^>]*>/g, "");
 }
 
-test("a strip above the cards compares how many favorites each hall serves in the selected meal, most first", () => {
+test("a strip above the cards compares how many favorites each hall serves in the selected meal, halls in page order", () => {
   const html = render();
   expect(strip(html)).toBe("Top of Lenoir has 1 of your favorites · Chase has 0");
   expect(html.indexOf('aria-label="Favorites by hall"')).toBeLessThan(html.indexOf(">Top of Lenoir</h2>"));
@@ -202,8 +202,9 @@ test("a strip above the cards compares how many favorites each hall serves in th
     ],
   };
   // Chase serves Late Lunch, Lenoir doesn't: 3 distinct favorites (Turkey Club twice) against 0.
+  // The halls keep their page order, so the strip doesn't reshuffle as counts change.
   expect(strip(render([lenoir, chaseFavorites], { meal: "Late Lunch" }))).toBe(
-    "Chase has 3 of your favorites · Top of Lenoir has 0",
+    "Top of Lenoir has 0 of your favorites · Chase has 3",
   );
 });
 
