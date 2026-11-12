@@ -74,3 +74,11 @@ test("shows when and where each favorite was last served, when there's an earlie
   expect(html).toContain("Last served at Top of Lenoir, Sun Nov 1, Brunch");
   expect(html.match(/Last served/g)).toHaveLength(1);
 });
+
+test("while today's menus load, each favorite holds a placeholder where its last-served line goes", () => {
+  const loading = renderToStaticMarkup(<MeScreen favorites={favorites} theme="system" />);
+  expect(loading.match(/animate-pulse/g)).toHaveLength(favorites.length);
+
+  const loaded = renderToStaticMarkup(<MeScreen favorites={favorites} favoritesLastServed={{}} theme="system" />);
+  expect(loaded).not.toContain("animate-pulse");
+});
