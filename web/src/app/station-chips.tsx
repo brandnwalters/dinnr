@@ -8,10 +8,14 @@ import type { Station } from "@/lib/today";
 /**
  * Opens every collapsed `<details>` around (or at) the element with id `id`,
  * so a jump to a station inside a collapsed bar or Extras lands on something
- * visible. Returns the element, if there is one.
+ * visible. Returns the element, if there is one. `page` is the document
+ * (passed in tests, which have no DOM).
  */
-export function revealStation(id: string): HTMLElement | null {
-  const element = document.getElementById(id);
+export function revealStation(
+  id: string,
+  page: Pick<Document, "getElementById"> = document,
+): HTMLElement | null {
+  const element = page.getElementById(id);
   for (let details = element?.closest("details"); details; details = details.parentElement?.closest("details")) {
     details.open = true;
   }
