@@ -1,22 +1,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FavoriteDish } from "@/lib/favorites";
 import type { Theme } from "@/lib/preferences";
+import type { LastServed } from "@/lib/today";
 import { Bone } from "../menu-skeleton";
 import { AppearanceSetting } from "./appearance-setting";
 import { FavoritesList } from "./favorites-list";
 
 /**
- * The Me screen: the user's favorites (each can be unstarred), the
+ * The Me screen: the user's favorites (each can be unstarred, with when it
+ * was last served), the
  * Appearance setting and an About section. Presentational, so it renders to
  * static markup in tests; `MeView` wires it to the on-device preferences.
  */
 export function MeScreen({
   favorites,
+  favoritesLastServed,
   onRemoveFavorite,
   theme,
   onThemeChange,
 }: {
   favorites: FavoriteDish[];
+  /** When each favorite was last served (`TodayMenu.favoritesLastServed`); absent while today's menus load. */
+  favoritesLastServed?: Record<string, LastServed>;
   onRemoveFavorite?: (normalizedName: string) => void;
   theme: Theme;
   onThemeChange?: (theme: Theme) => void;
@@ -33,7 +38,7 @@ export function MeScreen({
           <p className="text-sm text-muted-foreground">
             A favorite matches the dish by name at any station or hall.
           </p>
-          <FavoritesList favorites={favorites} onRemove={onRemoveFavorite} />
+          <FavoritesList favorites={favorites} lastServed={favoritesLastServed} onRemove={onRemoveFavorite} />
         </CardContent>
       </Card>
       <Card>
