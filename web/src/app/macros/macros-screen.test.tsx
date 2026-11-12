@@ -5,7 +5,7 @@ import type { Allergen } from "@/lib/allergens";
 import type { MacroTargets } from "@/lib/combos";
 import type { Hall, MenuItem } from "@/lib/today";
 import type { HallQuery } from "../hall-columns";
-import { CombosScreen } from "./combos-screen";
+import { MacrosScreen } from "./macros-screen";
 
 const food = (name: string, recipeId: number, calories: number, proteinG: number): MenuItem => ({
   name,
@@ -49,7 +49,7 @@ const render = (
   { includeExcludedStations = false, allergens = [] as Allergen[], query = {} as HallQuery, halls = HALLS } = {},
 ) =>
   renderToStaticMarkup(
-    <CombosScreen
+    <MacrosScreen
       halls={halls}
       query={query}
       filters={{ dietFilters: [], allergens }}
@@ -64,10 +64,10 @@ const render = (
 /** The opening tag of the `<input>` named `name`. */
 const inputTag = (html: string, name: string) => html.match(new RegExp(`<input[^>]*name="${name}"[^>]*>`))?.[0] ?? "";
 
-test("the targets card has min and max inputs for each macro, showing the saved targets", () => {
+test("the daily targets card has min and max inputs for each macro, showing the saved targets", () => {
   const html = render({ proteinG: { min: 30 }, calories: { max: 600 } });
 
-  expect(html).toContain("Targets");
+  expect(html).toContain(">Daily targets<");
   for (const macro of ["calories", "proteinG", "carbsG", "fatG"]) {
     for (const bound of ["min", "max"]) expect(inputTag(html, `${macro}-${bound}`)).toContain('type="number"');
   }
@@ -187,7 +187,7 @@ test("when filters hide every dish in a hall's meal period, it says so and offer
 
 test("the meal-period and hall switchers come first, above the targets card, even before any target is set", () => {
   for (const html of [render({}), render({ proteinG: { min: 30 } })]) {
-    const targets = html.indexOf("Targets for one meal");
+    const targets = html.indexOf("Daily targets");
     expect(html.indexOf('aria-label="Meal period"')).toBeGreaterThan(-1);
     expect(html.indexOf('aria-label="Meal period"')).toBeLessThan(targets);
     expect(html.indexOf('aria-label="Dining hall"')).toBeGreaterThan(-1);

@@ -22,8 +22,8 @@ function withBound(targets: MacroTargets, macro: Macro, bound: keyof MacroRange,
 const BOUND_NAMES = { min: "Minimum", max: "Maximum" } as const;
 
 /**
- * The compact targets card on the Combos tab: min and max boxes for calories,
- * protein, carbs and fat for one meal (all optional), and the switch that lets
+ * The compact targets card on the Macros tab: min and max boxes for calories,
+ * protein, carbs and fat for the whole day (all optional), and the switch that lets
  * condiment, beverage and cereal stations into combos. Saving is the caller's
  * job (`onTargetsChange` and `onIncludeExcludedStationsChange`).
  */
@@ -46,7 +46,7 @@ export function TargetsCard({
     <Card size="sm" className="md:max-w-xl">
       <CardHeader>
         <CardTitle>
-          <h2>Targets for one meal</h2>
+          <h2>Daily targets</h2>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

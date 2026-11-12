@@ -1,7 +1,7 @@
 import { SegmentedControl } from "./segmented-control";
 
 /**
- * The shared meal-period switcher (Menus, Today, Combos): one option per meal
+ * The shared meal-period switcher (Menus, Today, Macros): one option per meal
  * period served today in either hall (`mealPeriodNames`), setting `?meal=`,
  * which switches every hall that serves it. `selected` comes from
  * `selectedMealPeriod`. Renders nothing when no hall serves anything today.

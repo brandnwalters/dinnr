@@ -4,8 +4,12 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   async redirects() {
-    // Favorites moved to the Me tab: keep old links and bookmarks working.
-    return [{ source: "/favorites", destination: "/me", permanent: true }];
+    // Keep old links and bookmarks working (Next passes the query, e.g. ?meal=&hall=, through):
+    // Favorites moved to the Me tab, and Combos became Macros.
+    return [
+      { source: "/favorites", destination: "/me", permanent: true },
+      { source: "/combos", destination: "/macros", permanent: true },
+    ];
   },
 };
 

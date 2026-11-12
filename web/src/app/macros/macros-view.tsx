@@ -6,19 +6,19 @@ import { usePreferences } from "@/lib/preferences-store";
 import { hallQuery } from "../hall-columns";
 import { MenuSkeleton } from "../menu-skeleton";
 import { useTodayMenu } from "../today-menu-provider";
-import { CombosScreen } from "./combos-screen";
+import { MacrosScreen } from "./macros-screen";
 
 /**
- * The Combos tab, filled from the shell's shared menu, the `?meal=` / `?hall=`
+ * The Macros tab, filled from the shell's shared menu, the `?meal=` / `?hall=`
  * URL state and the targets saved on the device (edits save as they're typed).
  */
-export function CombosView() {
+export function MacrosView() {
   const menu = useTodayMenu();
   const [preferences, updatePreferences] = usePreferences();
   const searchParams = useSearchParams();
   if (!menu || !preferences) return <MenuSkeleton />;
   return (
-    <CombosScreen
+    <MacrosScreen
       halls={menu.halls}
       query={hallQuery(searchParams)}
       targets={preferences.macroTargets}

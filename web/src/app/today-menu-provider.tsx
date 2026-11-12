@@ -10,7 +10,7 @@ const TodayMenuContext = createContext<TodayMenu | null>(null);
 
 /**
  * Loads today's menus once for the whole app shell, so every tab (Today,
- * Menus, Combos) shares them and switching tabs doesn't refetch. Preferences
+ * Menus, Macros) shares them and switching tabs doesn't refetch. Preferences
  * live on the device: they're read first, then the menus load through
  * `loadToday`, again only when a preference the server query reads
  * (`todayQueryPreferences`: filters, favorites) changes. The meal period is

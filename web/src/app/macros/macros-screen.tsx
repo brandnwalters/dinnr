@@ -13,7 +13,7 @@ import { ComboCard } from "./combo-card";
 import { TargetsCard } from "./targets-card";
 
 /**
- * The Combos tab: the shared meal-period switcher (and, on phones, the hall
+ * The Macros tab: the shared meal-period switcher (and, on phones, the hall
  * switcher) at the top like Today and Menus, the targets card, then each
  * hall's top combos for the picked meal period. Like Menus, phones show
  * one hall at a time and from ~1024px up every hall gets a column. Combos
@@ -22,7 +22,7 @@ import { TargetsCard } from "./targets-card";
  * dishes the filters all hide says so.
  * Presentational: the URL, the menu and the saved targets come in as props.
  */
-export function CombosScreen({
+export function MacrosScreen({
   halls,
   query,
   targets,
