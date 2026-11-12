@@ -1,6 +1,6 @@
 import { shortDiningDate } from "@/lib/dining-date";
 import { cn } from "@/lib/utils";
-import type { LastServed } from "@/lib/today";
+import type { LastServed } from "@/lib/served-history";
 
 /**
  * "Last served at Chase, Tue Nov 3, Dinner", or nothing when there's no earlier record.

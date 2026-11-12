@@ -1,7 +1,7 @@
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { FavoriteDish } from "@/lib/favorites";
-import type { LastServed } from "@/lib/today";
+import type { LastServed } from "@/lib/served-history";
 import { LastServedLine } from "../last-served-line";
 import { Bone } from "../menu-skeleton";
 

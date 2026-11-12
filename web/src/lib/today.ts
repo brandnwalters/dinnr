@@ -2,6 +2,8 @@ import { isAllergen, type Allergen } from "./allergens";
 import { query } from "./db";
 import { withSelectedMeal } from "./meal-periods";
 import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
+import { DINING_TIME_ZONE, diningDate } from "./dining-date";
+import { lastServedBefore, recentlyServedBefore, type LastServed } from "./served-history";
 import { emptyWeek, getUsualHours, type UsualHours } from "./usual-hours";
 
 /**
@@ -27,17 +29,8 @@ import { emptyWeek, getUsualHours, type UsualHours } from "./usual-hours";
  * History comes from the saved menu days: each item, and each favorite
  * (`TodayMenu.favoritesLastServed`), carries when it was last served before
  * today at either hall, and is flagged New today when its own hall hasn't
- * served it lately (`NEW_TODAY_WINDOW_DAYS`, `NEW_TODAY_MIN_HISTORY_DAYS`).
+ * served it lately (`served-history.ts`).
  */
-
-import { DINING_TIME_ZONE, diningDate } from "./dining-date";
-
-export { DINING_TIME_ZONE, diningDate };
-
-/** A dish is New today when its hall served nothing with its normalized name in this many days before today. */
-export const NEW_TODAY_WINDOW_DAYS = 14;
-/** New today is off at a hall until it has at least this many saved menu days before today. */
-export const NEW_TODAY_MIN_HISTORY_DAYS = 14;
 
 /**
  * The main macros of one serving, from the item's recipe nutrition. Amounts are
@@ -72,17 +65,11 @@ export type MenuItem = {
   lastServed?: LastServed;
   /**
    * True when this hall served no dish with `normalizedName` in the
-   * `NEW_TODAY_WINDOW_DAYS` before today, once it has `NEW_TODAY_MIN_HISTORY_DAYS`
+   * `NEW_TODAY_WINDOW_DAYS` (`served-history.ts`) before today, once it has `NEW_TODAY_MIN_HISTORY_DAYS`
    * saved menu days before today; absent otherwise. Judged whatever the filters.
    */
   newToday?: true;
 };
-/**
- * A dish's most recent serving before today: its dining date (YYYY-MM-DD),
- * meal period and hall. Taken from the saved menu days whatever the filters;
- * today's own servings never count.
- */
-export type LastServed = { date: string; mealPeriod: string; hallSlug: string; hallName: string };
 /**
  * `excludedFromCombos` is present (true) only for stations the scraper flagged
  * as not part of meal combos (condiments, beverages, cereal, ...).
@@ -204,73 +191,6 @@ type Row = {
 };
 
 type HallRows = { slug: string; name: string; menuStatus: MenuStatus | null; mealPeriods: MealPeriod[] };
-
-type LastServedRow = {
-  normalized_name: string;
-  date: string;
-  meal_period_name: string;
-  slug: string;
-  location_name: string;
-};
-
-/**
- * The most recent serving before `date`, at any hall, of each dish served on
- * `date` and of each of `extraNames` (all by normalized name). Within one day
- * the later meal period wins; a tie across halls goes to the first hall.
- */
-async function lastServedBefore(date: string, extraNames: string[]): Promise<Map<string, LastServed>> {
-  const rows = await query<LastServedRow>(
-    `select distinct on (mi.normalized_name)
-            mi.normalized_name, to_char(md.date, 'YYYY-MM-DD') as date, mp.name as meal_period_name,
-            l.slug, l.name as location_name
-     from menu_item mi
-     join meal_period mp on mp.id = mi.meal_period_id
-     join menu_day md on md.id = mp.menu_day_id
-     join location l on l.id = md.location_id
-     where md.date < $1
-       and (mi.normalized_name = any($2::text[])
-            or mi.normalized_name in (
-              select t.normalized_name from menu_item t
-              join meal_period tmp on tmp.id = t.meal_period_id
-              join menu_day tmd on tmd.id = tmp.menu_day_id
-              where tmd.date = $1))
-     order by mi.normalized_name, md.date desc, mp.position desc, l.id`,
-    [date, extraNames],
-  );
-  return new Map(
-    rows.map((r) => [
-      r.normalized_name,
-      { date: r.date, mealPeriod: r.meal_period_name, hallSlug: r.slug, hallName: r.location_name },
-    ]),
-  );
-}
-
-/**
- * For each hall with at least `NEW_TODAY_MIN_HISTORY_DAYS` saved menu days
- * before `date`, the normalized names it served in the `NEW_TODAY_WINDOW_DAYS`
- * before `date` (only those it also serves on `date`). Halls with less history
- * are left out: nothing there is New today.
- */
-async function recentlyServedBefore(date: string): Promise<Map<number, Set<string>>> {
-  const rows = await query<{ location_id: number; recent: string[] }>(
-    `select md.location_id,
-            coalesce(array_agg(distinct mi.normalized_name)
-                       filter (where md.date >= $1::date - $2::int and mi.normalized_name in (
-                         select t.normalized_name from menu_item t
-                         join meal_period tmp on tmp.id = t.meal_period_id
-                         join menu_day tmd on tmd.id = tmp.menu_day_id
-                         where tmd.date = $1 and tmd.location_id = md.location_id)),
-                     '{}') as recent
-     from menu_day md
-     left join meal_period mp on mp.menu_day_id = md.id
-     left join menu_item mi on mi.meal_period_id = mp.id
-     where md.date < $1
-     group by md.location_id
-     having count(distinct md.id) >= $3`,
-    [date, NEW_TODAY_WINDOW_DAYS, NEW_TODAY_MIN_HISTORY_DAYS],
-  );
-  return new Map(rows.map((r) => [r.location_id, new Set(r.recent)]));
-}
 
 export async function getToday({
   now,

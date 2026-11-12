@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FavoriteDish } from "@/lib/favorites";
 import type { Theme } from "@/lib/preferences";
-import type { LastServed } from "@/lib/today";
+import type { LastServed } from "@/lib/served-history";
 import { Bone } from "../menu-skeleton";
 import { AppearanceSetting } from "./appearance-setting";
 import { FavoritesList } from "./favorites-list";
