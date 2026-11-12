@@ -82,10 +82,12 @@ export function MealPeriodHeading({ mealPeriod }: { mealPeriod: MealPeriod }) {
 function ItemRow({
   item,
   onToggleFavorite,
+  onLogDish,
   children,
 }: {
   item: MenuItem;
   onToggleFavorite?: (item: MenuItem) => void;
+  onLogDish?: (item: MenuItem, servings: number) => void;
   children?: ReactNode;
 }) {
   return (
@@ -98,7 +100,11 @@ function ItemRow({
       )}
     >
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 py-1 text-sm break-words">
-        <NutritionSheet item={item} onToggleFavorite={onToggleFavorite} />
+        <NutritionSheet
+          item={item}
+          onToggleFavorite={onToggleFavorite}
+          onLog={onLogDish && ((servings) => onLogDish(item, servings))}
+        />
         {children}
         <DietChips tags={item.dietaryTags} />
       </div>
@@ -117,6 +123,7 @@ export function MealPeriodMenu({
   mealPeriod,
   anchorHall,
   onToggleFavorite,
+  onLogDish,
   onClearFilters,
 }: {
   mealPeriod: MealPeriod;
@@ -130,6 +137,8 @@ export function MealPeriodMenu({
   anchorHall?: string;
   /** Star / unstar a dish (by its normalized name). */
   onToggleFavorite?: (item: MenuItem) => void;
+  /** "I ate this" in a dish's nutrition sheet: log it from this meal period. */
+  onLogDish?: (item: MenuItem, servings: number) => void;
 }) {
   return (
     <section>
@@ -140,7 +149,12 @@ export function MealPeriodMenu({
           <h4 className="py-2 font-semibold">Your favorites</h4>
           <ul>
             {mealPeriod.favorites.map(({ station, item }) => (
-              <ItemRow key={`${station}:${item.recipeId}`} item={item} onToggleFavorite={onToggleFavorite}>
+              <ItemRow
+                key={`${station}:${item.recipeId}`}
+                item={item}
+                onToggleFavorite={onToggleFavorite}
+                onLogDish={onLogDish}
+              >
                 <small className="text-muted-foreground">· {station}</small>
               </ItemRow>
             ))}
@@ -156,7 +170,7 @@ export function MealPeriodMenu({
           <h4 className="sticky top-app-header z-1 bg-background py-2 font-semibold">{station.name}</h4>
           <ul>
             {station.items.map((item) => (
-              <ItemRow key={item.recipeId} item={item} onToggleFavorite={onToggleFavorite} />
+              <ItemRow key={item.recipeId} item={item} onToggleFavorite={onToggleFavorite} onLogDish={onLogDish} />
             ))}
           </ul>
         </section>

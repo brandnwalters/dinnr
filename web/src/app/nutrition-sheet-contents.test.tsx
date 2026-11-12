@@ -43,6 +43,33 @@ test("says when nutrition is loading or couldn't be loaded", () => {
   expect(failed).not.toMatch(/loading nutrition/i);
 });
 
+const WITH_MACROS: MenuItem = {
+  ...ITEM,
+  nutrition: { servingSize: "1 each", calories: 210, proteinG: 11, carbsG: 30, fatG: 6 },
+};
+
+/** The opening tag of the button whose text is `label`. */
+const buttonTag = (html: string, label: string) =>
+  html.slice(0, html.indexOf(`>${label}</button>`) + 1).match(/<button\b[^>]*>/g)?.at(-1) ?? "";
+
+test("'I ate this' logs the dish, with a servings stepper in ½ steps starting at 1", () => {
+  const html = renderToStaticMarkup(
+    <NutritionSheetContents item={WITH_MACROS} nutrition={{ state: "loading" }} onLog={() => {}} />,
+  );
+
+  expect(buttonTag(html, "I ate this")).not.toMatch(/ disabled=""/);
+  expect(html).toMatch(/aria-label="Fewer servings"/);
+  expect(html).toMatch(/aria-label="More servings"/);
+  expect(text(html)).toContain("1 serving");
+});
+
+test("'I ate this' is disabled, with the reason, for a dish without nutrition data", () => {
+  const html = renderToStaticMarkup(<NutritionSheetContents item={ITEM} nutrition={{ state: "loading" }} onLog={() => {}} />);
+
+  expect(buttonTag(html, "I ate this")).toMatch(/ disabled=""/);
+  expect(text(html)).toMatch(/No nutrition data for this dish/);
+});
+
 test("once loaded, shows the nutrition label and ingredients", () => {
   const shown = text(
     renderToStaticMarkup(
