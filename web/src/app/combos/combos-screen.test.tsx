@@ -24,6 +24,7 @@ const hall = (slug: string, name: string, items: MenuItem[]): Hall => ({
   currentMealPeriod: "Dinner",
   selectedMealPeriod: "Dinner",
   favoriteCount: 0,
+  usualHours: [],
   mealPeriods: [
     { name: "Lunch", start: "11:00", end: "14:00", favorites: [], stations: [{ name: "Grill", items: [food("Lunch Only Wrap", 9, 400, 60)] }] },
     {

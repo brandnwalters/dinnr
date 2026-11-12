@@ -28,6 +28,7 @@ const lenoir: Hall = {
   currentMealPeriod: "Lunch",
   selectedMealPeriod: "Lunch",
   favoriteCount: 1,
+  usualHours: [],
   mealPeriods: [
     meal("Lunch", "11:00", "14:30", [
       { name: "Grill", items: [item("Nashville Hot Chicken Biscuit", 15469)] },
@@ -44,6 +45,7 @@ const chase: Hall = {
   currentMealPeriod: "Late Lunch",
   selectedMealPeriod: "Late Lunch",
   favoriteCount: 0,
+  usualHours: [],
   mealPeriods: [
     meal("Late Lunch", "14:00", "16:30", [{ name: "Deli", items: [item("Turkey Club", 40001)] }]),
     meal("Dinner", "17:00", "21:00", [{ name: "Wok", items: [item("Lo Mein", 50001)] }]),

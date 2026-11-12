@@ -28,6 +28,7 @@ const lenoir: Hall = {
   currentMealPeriod: "Brunch",
   selectedMealPeriod: "Brunch",
   favoriteCount: 1,
+  usualHours: [],
   mealPeriods: [
     meal("Brunch", "10:30", "15:00", [
       {
@@ -53,6 +54,7 @@ const chase: Hall = {
   currentMealPeriod: "Late Lunch",
   selectedMealPeriod: "Late Lunch",
   favoriteCount: 0,
+  usualHours: [],
   mealPeriods: [
     meal("Late Lunch", "14:00", "16:30", [{ name: "Deli", items: [item("Turkey Club", 9)] }]),
     meal("Dinner", "17:00", "21:00", [{ name: "Wok", items: [item("Lo Mein", 10)] }]),
@@ -266,4 +268,13 @@ test("Today no longer renders the full menus", () => {
   expect(html).not.toContain("Hash Browns");
   expect(html).not.toMatch(/aria-label="(Star|Unstar) /);
   expect(html).not.toContain("g protein");
+});
+
+test("each card's status pill and hours line open that hall's Usual hours", () => {
+  const lenoirCard = card(render(), "Top of Lenoir");
+  const triggers = lenoirCard.match(/<button[^>]*aria-haspopup="dialog"[^>]*>.*?<\/button>/g) ?? [];
+  expect(triggers).toHaveLength(2);
+  expect(triggers[0]).toContain("Open now: Brunch until 3pm");
+  expect(triggers[1]).toContain("Brunch · 10:30am–3pm");
+  for (const trigger of triggers) expect(trigger).toContain("Usual hours for Top of Lenoir");
 });
