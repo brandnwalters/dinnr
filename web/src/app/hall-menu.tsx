@@ -92,10 +92,12 @@ export function MealPeriodHeading({
 function ItemRow({
   item,
   onToggleFavorite,
+  onLogDish,
   children,
 }: {
   item: MenuItem;
   onToggleFavorite?: (item: MenuItem) => void;
+  onLogDish?: (item: MenuItem, servings: number) => void;
   children?: ReactNode;
 }) {
   return (
@@ -108,7 +110,11 @@ function ItemRow({
       )}
     >
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 py-1 text-sm break-words">
-        <NutritionSheet item={item} onToggleFavorite={onToggleFavorite} />
+        <NutritionSheet
+          item={item}
+          onToggleFavorite={onToggleFavorite}
+          onLog={onLogDish && ((servings) => onLogDish(item, servings))}
+        />
         {children}
         <DietChips tags={item.dietaryTags} />
       </div>
@@ -123,12 +129,17 @@ export function itemCount(count: number): string {
   return `${count} ${count === 1 ? "item" : "items"}`;
 }
 
+/** What a dish's row can do: star it, and log it ("I ate this", see `MealPeriodMenu`). */
+type DishActions = {
+  onToggleFavorite?: (item: MenuItem) => void;
+  onLogDish?: (item: MenuItem, servings: number) => void;
+};
+
 /** What every station on Menus is drawn from. */
-type StationProps = {
+type StationProps = DishActions & {
   station: Station;
   /** See `MealPeriodMenu`. */
   anchorHall?: string;
-  onToggleFavorite?: (item: MenuItem) => void;
 };
 
 /** `station`'s deep-link anchor id, when the menu has anchors (`anchorHall`). */
@@ -137,11 +148,11 @@ function anchorId(anchorHall: string | undefined, station: Station): string | un
 }
 
 /** A list of dishes, one `ItemRow` each. */
-function ItemList({ items, onToggleFavorite }: { items: readonly MenuItem[]; onToggleFavorite?: (item: MenuItem) => void }) {
+function ItemList({ items, ...actions }: { items: readonly MenuItem[] } & DishActions) {
   return (
     <ul>
       {items.map((item) => (
-        <ItemRow key={item.recipeId} item={item} onToggleFavorite={onToggleFavorite} />
+        <ItemRow key={item.recipeId} item={item} {...actions} />
       ))}
     </ul>
   );
@@ -175,19 +186,19 @@ function ExpandSummary({ className, children }: { className?: string; children: 
  * scroll, then its collapsed preview (`stationPreview`: a few dishes,
  * favorites first) and "Show all N", which opens the rest in place below.
  */
-function MainStation({ station, anchorHall, onToggleFavorite }: StationProps) {
+function MainStation({ station, anchorHall, ...actions }: StationProps) {
   const { shown, rest } = stationPreview(station);
   return (
     <section id={anchorId(anchorHall, station)} className="scroll-mt-app-header">
       <h4 className="sticky top-app-header z-1 bg-background py-2 font-semibold">{station.name}</h4>
-      <ItemList items={shown} onToggleFavorite={onToggleFavorite} />
+      <ItemList items={shown} {...actions} />
       {rest.length > 0 && (
         <details className="group">
           <ExpandSummary className="text-sm font-medium group-open:hidden">
             Show all {station.items.length}
             <span className="sr-only"> {station.name} dishes</span>
           </ExpandSummary>
-          <ItemList items={rest} onToggleFavorite={onToggleFavorite} />
+          <ItemList items={rest} {...actions} />
         </details>
       )}
     </section>
@@ -195,20 +206,20 @@ function MainStation({ station, anchorHall, onToggleFavorite }: StationProps) {
 }
 
 /** A bar: one collapsed line, "Salad Bar · 42 items", that opens to all its dishes. */
-function Bar({ station, anchorHall, onToggleFavorite }: StationProps) {
+function Bar({ station, anchorHall, ...actions }: StationProps) {
   return (
     <details id={anchorId(anchorHall, station)} className="group scroll-mt-app-header border-b border-border/60">
       <ExpandSummary>
         <strong className="font-semibold">{station.name}</strong>{" "}
         <span className="text-sm text-muted-foreground">· {itemCount(station.items.length)}</span>
       </ExpandSummary>
-      <ItemList items={station.items} onToggleFavorite={onToggleFavorite} />
+      <ItemList items={station.items} {...actions} />
     </details>
   );
 }
 
 /** The one collapsed Extras section, "Extras · 60 items", that opens to each of its stations in full. */
-function Extras({ stations, anchorHall, onToggleFavorite }: Omit<StationProps, "station"> & { stations: Station[] }) {
+function Extras({ stations, anchorHall, ...actions }: Omit<StationProps, "station"> & { stations: Station[] }) {
   const count = stations.reduce((total, station) => total + station.items.length, 0);
   return (
     <details className="group">
@@ -219,7 +230,7 @@ function Extras({ stations, anchorHall, onToggleFavorite }: Omit<StationProps, "
       {stations.map((station) => (
         <section key={station.name} id={anchorId(anchorHall, station)} className="scroll-mt-app-header">
           <h5 className="py-2 text-sm font-semibold">{station.name}</h5>
-          <ItemList items={station.items} onToggleFavorite={onToggleFavorite} />
+          <ItemList items={station.items} {...actions} />
         </section>
       ))}
     </details>
@@ -238,6 +249,7 @@ export function MealPeriodMenu({
   mealPeriod,
   anchorHall,
   onToggleFavorite,
+  onLogDish,
   onClearFilters,
 }: {
   mealPeriod: MealPeriod;
@@ -251,8 +263,11 @@ export function MealPeriodMenu({
   anchorHall?: string;
   /** Star / unstar a dish (by its normalized name). */
   onToggleFavorite?: (item: MenuItem) => void;
+  /** "I ate this" in a dish's nutrition sheet: log it from this meal period. */
+  onLogDish?: (item: MenuItem, servings: number) => void;
 }) {
   const { main, bars, extras } = groupStations(mealPeriod.stations);
+  const actions: DishActions = { onToggleFavorite, onLogDish };
   return (
     <section>
       <MealPeriodHeading mealPeriod={mealPeriod} />
@@ -262,7 +277,7 @@ export function MealPeriodMenu({
           <h4 className="py-2 font-semibold">Your favorites</h4>
           <ul>
             {mealPeriod.favorites.map(({ station, item }) => (
-              <ItemRow key={`${station}:${item.recipeId}`} item={item} onToggleFavorite={onToggleFavorite}>
+              <ItemRow key={`${station}:${item.recipeId}`} item={item} {...actions}>
                 <small className="text-muted-foreground">· {station}</small>
               </ItemRow>
             ))}
@@ -270,12 +285,12 @@ export function MealPeriodMenu({
         </section>
       )}
       {main.map((station) => (
-        <MainStation key={station.name} station={station} anchorHall={anchorHall} onToggleFavorite={onToggleFavorite} />
+        <MainStation key={station.name} station={station} anchorHall={anchorHall} {...actions} />
       ))}
       {bars.map((station) => (
-        <Bar key={station.name} station={station} anchorHall={anchorHall} onToggleFavorite={onToggleFavorite} />
+        <Bar key={station.name} station={station} anchorHall={anchorHall} {...actions} />
       ))}
-      {extras.length > 0 && <Extras stations={extras} anchorHall={anchorHall} onToggleFavorite={onToggleFavorite} />}
+      {extras.length > 0 && <Extras stations={extras} anchorHall={anchorHall} {...actions} />}
     </section>
   );
 }

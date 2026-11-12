@@ -2,7 +2,7 @@ import type { Hall } from "@/lib/today";
 import { SegmentedControl } from "./segmented-control";
 
 /**
- * The phone hall switcher (Menus, Combos): a Top of Lenoir / Chase segmented
+ * The phone hall switcher (Menus, Macros): a Top of Lenoir / Chase segmented
  * control setting `?hall=<slug>`. Pages show only the selected hall
  * (`selectedHall`) below ~1024px and hide this switcher from there up, where
  * every hall gets its own column.

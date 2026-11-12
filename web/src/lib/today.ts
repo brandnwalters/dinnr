@@ -29,7 +29,9 @@ import { emptyWeek, getUsualHours, type UsualHours } from "./usual-hours";
  * today at either hall.
  */
 
-export const DINING_TIME_ZONE = "America/New_York";
+import { DINING_TIME_ZONE, diningDate } from "./dining-date";
+
+export { DINING_TIME_ZONE, diningDate };
 
 /**
  * The main macros of one serving, from the item's recipe nutrition. Amounts are
@@ -133,17 +135,6 @@ export type TodayOptions = {
   mealPeriod?: string;
   preferences?: Preferences;
 };
-
-/** The calendar date (YYYY-MM-DD) in Chapel Hill at `now`. */
-export function diningDate(now: Date): string {
-  // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: DINING_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
-}
 
 /** The wall-clock time ("HH:MM", 24-hour) in Chapel Hill at `now`. */
 export function diningTime(now: Date): string {

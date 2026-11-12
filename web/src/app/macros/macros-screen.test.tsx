@@ -1,11 +1,13 @@
-// UI smoke tests: the Combos screen (targets card, combo cards per hall with totals against the targets, empty states).
+// UI smoke tests: the Macros screen (today's log and progress, past 7 days, daily targets card, combo cards per
+// hall with totals against the targets, empty states).
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import type { Allergen } from "@/lib/allergens";
 import type { MacroTargets } from "@/lib/combos";
+import { addEntry, EMPTY_MEAL_LOG, type MealLog } from "@/lib/meal-log";
 import type { Hall, MenuItem } from "@/lib/today";
 import type { HallQuery } from "../hall-columns";
-import { CombosScreen } from "./combos-screen";
+import { MacrosScreen } from "./macros-screen";
 
 const food = (name: string, recipeId: number, calories: number, proteinG: number): MenuItem => ({
   name,
@@ -47,10 +49,16 @@ const HALLS = [
 
 const render = (
   targets: MacroTargets,
-  { includeExcludedStations = false, allergens = [] as Allergen[], query = {} as HallQuery, halls = HALLS } = {},
+  {
+    includeExcludedStations = false,
+    allergens = [] as Allergen[],
+    query = {} as HallQuery,
+    halls = HALLS,
+    log = EMPTY_MEAL_LOG as MealLog,
+  } = {},
 ) =>
   renderToStaticMarkup(
-    <CombosScreen
+    <MacrosScreen
       halls={halls}
       query={query}
       filters={{ dietFilters: [], allergens }}
@@ -59,16 +67,20 @@ const render = (
       includeExcludedStations={includeExcludedStations}
       onIncludeExcludedStationsChange={() => {}}
       onClearFilters={() => {}}
+      log={log}
+      today="2026-11-11"
+      onChangeServings={() => {}}
+      onDeleteEntry={() => {}}
     />,
   );
 
 /** The opening tag of the `<input>` named `name`. */
 const inputTag = (html: string, name: string) => html.match(new RegExp(`<input[^>]*name="${name}"[^>]*>`))?.[0] ?? "";
 
-test("the targets card has min and max inputs for each macro, showing the saved targets", () => {
+test("the daily targets card has min and max inputs for each macro, showing the saved targets", () => {
   const html = render({ proteinG: { min: 30 }, calories: { max: 600 } });
 
-  expect(html).toContain("Targets");
+  expect(html).toContain(">Daily targets<");
   for (const macro of ["calories", "proteinG", "carbsG", "fatG"]) {
     for (const bound of ["min", "max"]) expect(inputTag(html, `${macro}-${bound}`)).toContain('type="number"');
   }
@@ -188,7 +200,7 @@ test("when filters hide every dish in a hall's meal period, it says so and offer
 
 test("the meal-period and hall switchers come first, above the targets card, even before any target is set", () => {
   for (const html of [render({}), render({ proteinG: { min: 30 } })]) {
-    const targets = html.indexOf("Targets for one meal");
+    const targets = html.indexOf("Daily targets");
     expect(html.indexOf('aria-label="Meal period"')).toBeGreaterThan(-1);
     expect(html.indexOf('aria-label="Meal period"')).toBeLessThan(targets);
     expect(html.indexOf('aria-label="Dining hall"')).toBeGreaterThan(-1);
@@ -231,4 +243,103 @@ test("condiment-type stations stay out of combos until the switch is on", () => 
   expect(off).not.toContain("Peanut Butter");
   expect(toggle(on)).toContain('aria-checked="true"');
   expect(on).toContain("Peanut Butter");
+});
+
+const LENOIR = { slug: "top-of-lenoir", name: "Top of Lenoir" };
+const CHASE = { slug: "chase", name: "Chase" };
+// 140 cal, 25 g protein / 200 cal, 4 g protein; 10 g carbs and 5 g fat each.
+const [CHICKEN, RICE] = HALLS[0].mealPeriods[1].stations[0].items;
+const SALMON = HALLS[1].mealPeriods[1].stations[0].items[0]; // 300 cal, 34 g protein
+
+/** 12:30pm and 6:30pm in Chapel Hill (EST) on `date`. */
+const noon = (date: string) => new Date(`${date}T17:30:00Z`);
+const evening = (date: string) => new Date(`${date}T23:30:00Z`);
+
+/** Today (2026-11-11): Chicken ×2 at Lenoir lunch, Salmon at Chase dinner. Yesterday: Rice ×1½. A week ago: Salmon. */
+const LOG = [
+  { item: CHICKEN, hall: LENOIR, mealPeriod: "Lunch", servings: 2, at: noon("2026-11-11") },
+  { item: SALMON, hall: CHASE, mealPeriod: "Dinner", servings: 1, at: evening("2026-11-11") },
+  { item: RICE, hall: LENOIR, mealPeriod: "Dinner", servings: 1.5, at: evening("2026-11-10") },
+  { item: SALMON, hall: CHASE, mealPeriod: "Lunch", servings: 1, at: noon("2026-11-04") },
+].reduce((log, { at, ...dish }) => addEntry(log, dish, at), EMPTY_MEAL_LOG);
+
+const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+/** The markup from the h2 `heading` up to the next h2. */
+function section(html: string, heading: string): string {
+  const start = html.indexOf(`>${heading}</h2>`);
+  const end = html.indexOf("<h2", start);
+  return start === -1 ? "" : html.slice(start, end === -1 ? undefined : end);
+}
+
+test("Macros shows, in order: switchers, today's progress, today's entries, daily targets, combos, past 7 days", () => {
+  const html = render({ proteinG: { min: 30 } }, { log: LOG });
+  const order = [
+    'aria-label="Meal period"',
+    ">Today</h2>",
+    ">Today&#x27;s meals</h2>",
+    ">Daily targets</h2>",
+    'aria-label="Totals"',
+    ">Past 7 days<",
+  ].map((marker) => html.indexOf(marker));
+
+  expect(order.every((i) => i > -1)).toBe(true);
+  expect([...order].sort((a, b) => a - b)).toEqual(order);
+});
+
+test("today's totals show as progress bars against the daily targets, and as plain totals without one", () => {
+  // Today: 2× Chicken (280 cal, 50 g protein, 20 g carbs, 10 g fat) + Salmon (300 cal, 34 g, 10 g, 5 g).
+  const html = section(render({ calories: { max: 2000 }, proteinG: { min: 120 } }, { log: LOG }), "Today");
+  const bars = [...html.matchAll(/<div[^>]*role="progressbar"[^>]*>/g)].map(([tag]) => tag);
+
+  expect(bars).toHaveLength(2);
+  expect(bars[0]).toContain('aria-label="Calories"');
+  expect(bars[0]).toContain('aria-valuenow="580"');
+  expect(bars[0]).toContain('aria-valuemax="2000"');
+  expect(bars[1]).toContain('aria-label="Protein"');
+  expect(bars[1]).toContain('aria-valuenow="84"');
+  expect(bars[1]).toContain('aria-valuemax="120"');
+  expect(text(html)).toContain("580 of ≤ 2000 cal");
+  expect(text(html)).toContain("84 of ≥ 120 g");
+  expect(text(html)).toMatch(/Carbs 30 g/);
+  expect(text(html)).toMatch(/Fat 15 g/);
+});
+
+test("today's entries are listed by meal period, each with a servings stepper and a delete button", () => {
+  const html = section(render({}, { log: LOG }), "Today&#x27;s meals");
+  const lunch = html.indexOf(">Lunch</h3>");
+  const dinner = html.indexOf(">Dinner</h3>");
+
+  expect(lunch).toBeGreaterThan(-1);
+  expect(dinner).toBeGreaterThan(lunch);
+  expect(html.slice(lunch, dinner)).toContain("Grilled Chicken");
+  expect(text(html.slice(lunch, dinner))).toContain("Top of Lenoir");
+  expect(text(html.slice(lunch, dinner))).toContain("2 servings");
+  expect(html.slice(dinner)).toContain("Salmon");
+  expect(html).toMatch(/aria-label="More servings of Grilled Chicken"/);
+  expect(html).toMatch(/aria-label="Delete Grilled Chicken"/);
+  expect(html).toMatch(/aria-label="Delete Salmon"/);
+  expect(html).not.toContain("Rice"); // yesterday's
+});
+
+test("with nothing logged today, a hint explains how to log a dish", () => {
+  const html = render({}, { log: EMPTY_MEAL_LOG });
+
+  expect(text(section(html, "Today&#x27;s meals"))).toMatch(/I ate this/);
+  expect(html).not.toContain('role="progressbar"');
+});
+
+test("'Past 7 days' is collapsed, lists each earlier day's totals, and opens to editable entries", () => {
+  const html = render({}, { log: LOG });
+  const past = html.slice(html.indexOf("<details"));
+
+  expect(html.match(/<details[^>]*>/)?.[0]).not.toMatch(/\bopen\b/);
+  expect(past).toContain(">Past 7 days<");
+  const days = text(past);
+  // Yesterday: 1½× Rice (200 cal, 4 g protein, 10 g carbs, 5 g fat).
+  expect(days).toMatch(/Tue, Nov 10 · 300 cal · 6 g protein · 15 g carbs · 7.5 g fat/);
+  expect(days).toMatch(/Wed, Nov 4 · 300 cal · 34 g protein/);
+  expect(days.indexOf("Nov 10")).toBeLessThan(days.indexOf("Nov 4"));
+  expect(past).toMatch(/aria-label="Delete Rice"/);
+  expect(past).toMatch(/aria-label="Fewer servings of Rice"/);
 });

@@ -7,6 +7,8 @@ import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTr
 import { Input } from "@/components/ui/input";
 import { searchDishes } from "@/lib/dish-search";
 import { toggleFavorite } from "@/lib/favorites";
+import { addEntry, type DishToLog } from "@/lib/meal-log";
+import { useMealLog } from "@/lib/meal-log-store";
 import { usePreferences } from "@/lib/preferences-store";
 import type { MenuItem, TodayMenu } from "@/lib/today";
 import { EmptyState } from "./menu-empty-states";
@@ -24,6 +26,7 @@ import { useTodayMenu } from "./today-menu-provider";
 export function SearchSheet() {
   const menu = useTodayMenu();
   const [, updatePreferences] = usePreferences();
+  const [, updateMealLog] = useMealLog();
   const [query, setQuery] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -64,6 +67,7 @@ export function SearchSheet() {
           onToggleFavorite={(item) =>
             updatePreferences((p) => ({ ...p, favorites: toggleFavorite(p.favorites, item) }))
           }
+          onLogDish={(dish) => updateMealLog((log) => addEntry(log, dish, new Date()))}
         />
       </DialogContent>
     </Dialog>
@@ -83,12 +87,15 @@ export function SearchPanel({
   menu,
   inputRef,
   onToggleFavorite,
+  onLogDish,
 }: {
   query: string;
   onQueryChange: (query: string) => void;
   menu: TodayMenu | null;
   inputRef?: React.Ref<HTMLInputElement>;
   onToggleFavorite?: (item: MenuItem) => void;
+  /** "I ate this" in a result's nutrition sheet, tagged with the hall and meal period it's served at. */
+  onLogDish?: (dish: DishToLog) => void;
 }) {
   const blank = query.trim() === "";
   const search = menu && !blank ? searchDishes(query, menu) : null;
@@ -140,7 +147,20 @@ export function SearchPanel({
                               key={`${station}/${item.recipeId}/${item.name}`}
                               className="flex min-h-tap flex-col justify-center border-b py-1 last:border-b-0"
                             >
-                              <NutritionSheet item={item} onToggleFavorite={onToggleFavorite} />
+                              <NutritionSheet
+                                item={item}
+                                onToggleFavorite={onToggleFavorite}
+                                onLog={
+                                  onLogDish &&
+                                  ((servings) =>
+                                    onLogDish({
+                                      item,
+                                      servings,
+                                      hall: { slug: hall.slug, name: hall.name },
+                                      mealPeriod: mealPeriod.name,
+                                    }))
+                                }
+                              />
                               <span className="text-xs text-muted-foreground">{station}</span>
                             </li>
                           ))}

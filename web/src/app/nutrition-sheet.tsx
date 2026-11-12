@@ -17,9 +17,12 @@ import { NutritionSheetContents, type NutritionLoad } from "./nutrition-sheet-co
 export function NutritionSheet({
   item,
   onToggleFavorite,
+  onLog,
 }: {
   item: MenuItem;
   onToggleFavorite?: (item: MenuItem) => void;
+  /** Log the dish ("I ate this"); without it the sheet has no log section. */
+  onLog?: (servings: number) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [nutrition, setNutrition] = useState<NutritionLoad | null>(null);
@@ -60,6 +63,7 @@ export function NutritionSheet({
           item={item}
           nutrition={nutrition ?? { state: "loading" }}
           onToggleFavorite={onToggleFavorite}
+          onLog={onLog}
         />
       </DialogContent>
     </Dialog>

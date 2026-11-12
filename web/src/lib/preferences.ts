@@ -25,7 +25,7 @@ export type Preferences = {
   dietFilters: DietaryTag[];
   /** Strict cutoffs: an item carrying any of these allergens is hidden. */
   allergens: Allergen[];
-  /** Macro combos: optional min/max per macro for one meal. */
+  /** Macros tab: optional daily min/max per macro (stored before targets became daily: kept as they are). */
   macroTargets: MacroTargets;
   /** Starred dishes, matched by normalized name at any station or hall (see `favorites.ts`). */
   favorites: FavoriteDish[];

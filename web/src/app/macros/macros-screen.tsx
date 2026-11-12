@@ -1,6 +1,7 @@
 import { SearchX, Target } from "lucide-react";
 import { useMemo } from "react";
 import { comboItemsFrom, MAX_DISTINCT_ITEMS, suggestCombos, type MacroTargets } from "@/lib/combos";
+import type { MealLog } from "@/lib/meal-log";
 import { selectedMealPeriod } from "@/lib/meal-periods";
 import type { Filters } from "@/lib/preferences";
 import type { Hall, MealPeriod } from "@/lib/today";
@@ -10,19 +11,23 @@ import { selectedHall } from "../hall-switcher";
 import { NotServing } from "../meal-period-switcher";
 import { allDayEmptyState, EmptyState, NoMatchingItems } from "../menu-empty-states";
 import { ComboCard } from "./combo-card";
+import { PastDays, TodayEntries, TodayProgress, type EntryActions } from "./meal-log-section";
 import { TargetsCard } from "./targets-card";
 
 /**
- * The Combos tab: the shared meal-period switcher (and, on phones, the hall
- * switcher) at the top like Today and Menus, the targets card, then each
- * hall's top combos for the picked meal period. Like Menus, phones show
- * one hall at a time and from ~1024px up every hall gets a column. Combos
- * respect the diet/allergen `filters` and favor favorites. A hall that is
- * closed all day, has no menu yet, doesn't serve the meal period, or whose
- * dishes the filters all hide says so.
- * Presentational: the URL, the menu and the saved targets come in as props.
+ * The Macros tab, top to bottom: the shared meal-period switcher (and, on
+ * phones, the hall switcher) like Today and Menus; today's progress against
+ * the daily targets; today's log entries by meal period; the daily targets
+ * card; each hall's top combos for the picked meal period; and the collapsed
+ * "Past 7 days". Like Menus, phones show one hall's combos at a time and from
+ * ~1024px up every hall gets a column. Combos respect the diet/allergen
+ * `filters` and favor favorites. A hall that is closed all day, has no menu
+ * yet, doesn't serve the meal period, or whose dishes the filters all hide
+ * says so.
+ * Presentational: the URL, the menu, the saved targets and the meal log
+ * (with `today`, the dining day) come in as props.
  */
-export function CombosScreen({
+export function MacrosScreen({
   halls,
   query,
   targets,
@@ -31,9 +36,14 @@ export function CombosScreen({
   onIncludeExcludedStationsChange,
   filters,
   onClearFilters,
+  log,
+  today,
+  onChangeServings,
+  onDeleteEntry,
 }: {
   halls: readonly Hall[];
   query: HallQuery;
+  /** The daily macro targets. */
   targets: MacroTargets;
   onTargetsChange?: (targets: MacroTargets) => void;
   /** Whether condiment-type stations may be part of combos. */
@@ -42,12 +52,18 @@ export function CombosScreen({
   filters: Filters;
   /** Turn off the diet and allergen filters (offered when they hide a whole meal period). */
   onClearFilters?: () => void;
-}) {
+  log: MealLog;
+  /** Today's dining day (YYYY-MM-DD, America/New_York). */
+  today: string;
+} & EntryActions) {
   const meal = selectedMealPeriod(halls, query.meal);
   const hall = selectedHall(halls, query.hall, meal);
+  const entryActions = { onChangeServings, onDeleteEntry };
   return (
     <div className="flex flex-col gap-4">
       <HallSwitchers halls={halls} query={query} meal={meal} hall={hall} />
+      <TodayProgress log={log} today={today} targets={targets} />
+      <TodayEntries log={log} today={today} {...entryActions} />
       <TargetsCard
         targets={targets}
         onTargetsChange={onTargetsChange}
@@ -80,6 +96,7 @@ export function CombosScreen({
           }}
         </HallColumns>
       )}
+      <PastDays log={log} today={today} {...entryActions} />
     </div>
   );
 }

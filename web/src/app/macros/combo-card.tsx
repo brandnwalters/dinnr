@@ -2,21 +2,12 @@ import { Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MACROS, type Combo, type MacroRange, type MacroTargets } from "@/lib/combos";
 import { cn } from "@/lib/utils";
-import { MACRO_LABELS } from "./macro-labels";
-
-/** Rounded for display: the engine adds labels' decimals (e.g. 2.5 g). */
-const amount = (n: number) => String(Math.round(n * 10) / 10);
+import { amount, MACRO_LABELS, rangeText } from "./macro-labels";
 
 /** Whether `total` meets a macro's target; false when that macro has none. */
 function withinTarget(total: number, range: MacroRange | undefined): boolean {
   if (!range) return false;
   return (range.min === undefined || total >= range.min) && (range.max === undefined || total <= range.max);
-}
-
-/** "≥ 30", "≤ 600", "50–90". */
-function rangeText({ min, max }: MacroRange): string {
-  if (min !== undefined && max !== undefined) return `${min}–${max}`;
-  return min !== undefined ? `≥ ${min}` : `≤ ${max}`;
 }
 
 /**
