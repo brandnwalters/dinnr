@@ -2,7 +2,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { MACROS, type Macro, type MacroRange, type MacroTargets } from "@/lib/combos";
+import type { TargetMode } from "@/lib/remaining-targets";
+import { SegmentedControl, type Segment } from "../segmented-control";
 import { MACRO_LABELS } from "./macro-labels";
+
+/** The mode toggle's options, in order. */
+const MODE_SEGMENTS: readonly (Segment & { value: TargetMode })[] = [
+  { value: "left", label: "Fill what's left today" },
+  { value: "per-meal", label: "Per meal" },
+];
 
 /**
  * `targets` with one bound set from what was typed: an empty box clears it,
@@ -24,20 +32,29 @@ const BOUND_NAMES = { min: "Minimum", max: "Maximum" } as const;
 /**
  * The compact targets card on the Macros tab: min and max boxes for calories,
  * protein, carbs and fat for the whole day (all optional), and the switch that lets
- * condiment, beverage and cereal stations into combos. Saving is the caller's
- * job (`onTargetsChange` and `onIncludeExcludedStationsChange`).
+ * condiment, beverage and cereal stations into combos, and the toggle that
+ * sizes combos ("Fill what's left today" or "Per meal", `?mode=` in the URL,
+ * keeping the rest of `query`). Saving is the caller's job
+ * (`onTargetsChange` and `onIncludeExcludedStationsChange`).
  */
 export function TargetsCard({
   targets,
   onTargetsChange,
   includeExcludedStations,
   onIncludeExcludedStationsChange,
+  mode,
+  query,
 }: {
   targets: MacroTargets;
   onTargetsChange?: (targets: MacroTargets) => void;
   includeExcludedStations: boolean;
   onIncludeExcludedStationsChange?: (include: boolean) => void;
+  /** The mode in use (selected in the toggle). */
+  mode: TargetMode;
+  /** The page's current query parameters (absent ones left out of the toggle's links). */
+  query: Readonly<Record<string, string | undefined>>;
 }) {
+  const links = Object.fromEntries(Object.entries(query).filter((entry): entry is [string, string] => entry[1] !== undefined));
   const set = (macro: Macro, bound: keyof MacroRange, text: string) => {
     const next = withBound(targets, macro, bound, text);
     if (next) onTargetsChange?.(next);
@@ -72,6 +89,7 @@ export function TargetsCard({
             onCheckedChange={(checked) => onIncludeExcludedStationsChange?.(checked)}
           />
         </div>
+        <SegmentedControl label="Size combos" param="mode" segments={MODE_SEGMENTS} selected={mode} query={links} />
       </CardContent>
     </Card>
   );
