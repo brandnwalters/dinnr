@@ -24,6 +24,7 @@ const today: TodayMenu = {
       currentMealPeriod: "Lunch",
       selectedMealPeriod: "Lunch",
       favoriteCount: 0,
+      usualHours: [],
       mealPeriods: [
         {
           name: "Lunch",
@@ -42,6 +43,7 @@ const today: TodayMenu = {
       currentMealPeriod: "Dinner",
       selectedMealPeriod: "Dinner",
       favoriteCount: 0,
+      usualHours: [],
       mealPeriods: [
         {
           name: "Dinner",

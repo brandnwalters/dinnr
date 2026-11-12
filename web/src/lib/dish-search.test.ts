@@ -30,6 +30,7 @@ const hall = (slug: string, name: string, mealPeriods: MealPeriod[]): Hall => ({
   currentMealPeriod: mealPeriods[0]?.name ?? null,
   selectedMealPeriod: mealPeriods[0]?.name ?? null,
   favoriteCount: 0,
+  usualHours: [],
   mealPeriods,
 });
 
