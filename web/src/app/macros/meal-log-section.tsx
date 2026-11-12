@@ -6,7 +6,7 @@ import { MACROS, type Macro, type MacroRange, type Macros, type MacroTargets } f
 import { dayTotals, entriesOn, pastDays, type LogEntry, type MealLog } from "@/lib/meal-log";
 import { cn } from "@/lib/utils";
 import { ServingsStepper } from "../servings-stepper";
-import { amount, MACRO_LABELS, rangeText } from "./macro-labels";
+import { amount, MACRO_LABELS, rangeText } from "@/lib/macro-labels";
 
 /**
  * The meal log on the Macros tab: today's progress against the daily targets,

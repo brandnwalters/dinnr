@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MACROS, type Combo, type MacroRange, type MacroTargets } from "@/lib/combos";
 import { cn } from "@/lib/utils";
-import { amount, MACRO_LABELS, rangeText } from "./macro-labels";
+import { amount, MACRO_LABELS, rangeText } from "@/lib/macro-labels";
 
 /** Whether `total` meets a macro's target; false when that macro has none. */
 function withinTarget(total: number, range: MacroRange | undefined): boolean {

@@ -1,4 +1,5 @@
 import { MACROS, type Macro, type MacroRange, type MacroTargets } from "./combos";
+import { MACRO_LABELS } from "./macro-labels";
 import { entriesTotals, type LogEntry } from "./meal-log";
 
 /**
@@ -72,19 +73,11 @@ function mealsLeft(mealPeriods: readonly string[], selectedMeal: string, todayEn
   return left.size;
 }
 
-/** How the reached-max message names each macro and its unit. */
-const MACRO_WORDS: Record<Macro, { name: string; unit: string }> = {
-  calories: { name: "calorie", unit: "cal" },
-  proteinG: { name: "protein", unit: "g" },
-  carbsG: { name: "carb", unit: "g" },
-  fatG: { name: "fat", unit: "g" },
-};
-
 /** "You've reached today's calorie and protein maximums (700 cal, 90 g), so there's nothing left to fill." */
 function reachedMessage(reached: readonly Macro[], targets: MacroTargets): string {
-  const names = reached.map((m) => MACRO_WORDS[m].name);
+  const names = reached.map((m) => MACRO_LABELS[m].modifier);
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-  const maxima = reached.map((m) => `${targets[m]!.max} ${MACRO_WORDS[m].unit}`).join(", ");
+  const maxima = reached.map((m) => `${targets[m]!.max} ${MACRO_LABELS[m].unit}`).join(", ");
   const noun = reached.length === 1 ? "maximum" : "maximums";
   return `You've reached today's ${list} ${noun} (${maxima}), so there's nothing left to fill.`;
 }
