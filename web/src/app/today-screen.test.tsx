@@ -186,7 +186,7 @@ function strip(html: string): string {
   return html.slice(html.indexOf(">", start) + 1, html.indexOf("</p>", start)).replace(/<[^>]*>/g, "");
 }
 
-test("a strip above the cards compares how many favorites each hall serves in the selected meal, most first", () => {
+test("a strip above the cards compares how many favorites each hall serves in the selected meal, halls in page order", () => {
   const html = render();
   expect(strip(html)).toBe("Top of Lenoir has 1 of your favorites · Chase has 0");
   expect(html.indexOf('aria-label="Favorites by hall"')).toBeLessThan(html.indexOf(">Top of Lenoir</h2>"));
@@ -202,8 +202,9 @@ test("a strip above the cards compares how many favorites each hall serves in th
     ],
   };
   // Chase serves Late Lunch, Lenoir doesn't: 3 distinct favorites (Turkey Club twice) against 0.
+  // The halls keep their page order, so the strip doesn't reshuffle as counts change.
   expect(strip(render([lenoir, chaseFavorites], { meal: "Late Lunch" }))).toBe(
-    "Chase has 3 of your favorites · Top of Lenoir has 0",
+    "Top of Lenoir has 0 of your favorites · Chase has 3",
   );
 });
 
@@ -310,6 +311,34 @@ describe("New today on the hall cards", () => {
     expect(list.match(/Jerk Chicken/g)).toHaveLength(1);
     expect(list).not.toContain("Buttermilk Pancake");
     expect(lenoirCard).toMatch(/>New today</);
+  });
+
+  test("a card leaves New today dishes from Extras stations off its list", () => {
+    const withNewExtra: Hall = {
+      ...lenoir,
+      mealPeriods: [
+        meal("Brunch", "10:30", "15:00", [
+          { name: "The Grill", items: [isNew(item("Jerk Chicken", 2))] },
+          { name: "Beverages", excludedFromCombos: true, items: [isNew(item("Mango Lassi", 5))] },
+        ]),
+      ],
+    };
+    const list = newToday(card(render([withNewExtra, chase]), "Top of Lenoir"));
+    expect(list).toContain("Jerk Chicken · The Grill");
+    expect(list).not.toContain("Mango Lassi");
+  });
+
+  test("a card whose only New today dishes are Extras shows no New today list", () => {
+    const onlyExtra: Hall = {
+      ...lenoir,
+      mealPeriods: [
+        meal("Brunch", "10:30", "15:00", [
+          { name: "The Grill", items: [item("Buttermilk Pancake", 1)] },
+          { name: "Beverages", excludedFromCombos: true, items: [isNew(item("Mango Lassi", 5))] },
+        ]),
+      ],
+    };
+    expect(card(render([onlyExtra, chase]), "Top of Lenoir")).not.toContain("New today");
   });
 
   test("a card with no New today dishes in the selected meal (after filters) shows nothing", () => {

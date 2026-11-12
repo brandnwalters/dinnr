@@ -5,17 +5,16 @@ import type { Hall } from "@/lib/today";
 /**
  * The strip above Today's cards comparing the halls' favorites in the meal
  * period `meal`: "★ Chase has 3 of your favorites · Top of Lenoir has 1", the
- * hall with the most first. Each count is the hall's `favoriteCount` for that
+ * halls in their page order (fixed, so the strip doesn't reshuffle as counts
+ * change). Each count is the hall's `favoriteCount` for that
  * meal period (0 for a hall that doesn't serve it), from the menu as filtered.
  * Hidden when no hall serves a favorite.
  */
 export function FavoritesStrip({ halls, meal }: { halls: readonly Hall[]; meal: string | null }) {
-  const counts = halls
-    .map((hall) => ({
-      name: hall.name,
-      count: hall.mealPeriods.some((mp) => mp.name === meal) ? withSelectedMeal(hall, meal).favoriteCount : 0,
-    }))
-    .sort((a, b) => b.count - a.count);
+  const counts = halls.map((hall) => ({
+    name: hall.name,
+    count: hall.mealPeriods.some((mp) => mp.name === meal) ? withSelectedMeal(hall, meal).favoriteCount : 0,
+  }));
   if (counts.every(({ count }) => count === 0)) return null;
   return (
     <p

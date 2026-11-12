@@ -3,10 +3,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MACROS, type Macro, type MacroRange, type Macros, type MacroTargets } from "@/lib/combos";
+import { shortDiningDate } from "@/lib/dining-date";
 import { dayTotals, entriesOn, pastDays, type LogEntry, type MealLog } from "@/lib/meal-log";
 import { cn } from "@/lib/utils";
 import { ServingsStepper } from "../servings-stepper";
-import { amount, MACRO_LABELS, rangeText } from "./macro-labels";
+import { amount, MACRO_LABELS, rangeText } from "@/lib/macro-labels";
 
 /**
  * The meal log on the Macros tab: today's progress against the daily targets,
@@ -160,13 +161,6 @@ function EntryList({ entries, onChangeServings, onDeleteEntry }: { entries: LogE
   );
 }
 
-/** "Tue, Nov 10" for a YYYY-MM-DD dining day. */
-function dayName(date: string): string {
-  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(
-    new Date(`${date}T00:00:00Z`),
-  );
-}
-
 /** "300 cal · 6 g protein · 15 g carbs · 7.5 g fat". */
 const totalsText = (totals: Macros) => MACROS.map((m) => `${amount(totals[m])} ${MACRO_LABELS[m].total}`).join(" · ");
 
@@ -190,7 +184,7 @@ export function PastDays({ log, today, ...actions }: { log: MealLog; today: stri
             <summary className="flex min-h-tap cursor-pointer items-center gap-2 text-sm">
               <ChevronRight aria-hidden className="size-4 shrink-0 transition-transform group-open/day:rotate-90" />
               <span>
-                <span className="font-medium">{dayName(day.date)}</span>
+                <span className="font-medium">{shortDiningDate(day.date)}</span>
                 <span className="text-muted-foreground"> · {totalsText(day.totals)}</span>
               </span>
             </summary>

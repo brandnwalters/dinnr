@@ -15,3 +15,10 @@ export function diningDate(now: Date): string {
     day: "2-digit",
   }).format(now);
 }
+
+/** "Tue Nov 3" for a dining date "2026-11-03" (a calendar date, so read in UTC to keep the day). */
+export function shortDiningDate(date: string): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" })
+    .format(new Date(`${date}T12:00:00Z`))
+    .replace(",", "");
+}

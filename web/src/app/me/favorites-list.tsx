@@ -1,17 +1,21 @@
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { FavoriteDish } from "@/lib/favorites";
-import type { LastServed } from "@/lib/today";
+import type { LastServed } from "@/lib/served-history";
 import { LastServedLine } from "../last-served-line";
+import { Bone } from "../menu-skeleton";
 
-/** The user's favorites, each with when it was last served (if known) and a star button that unstars it. */
+/**
+ * The user's favorites, each with when it was last served (if known, or a
+ * placeholder line while that's loading) and a star button that unstars it.
+ */
 export function FavoritesList({
   favorites,
-  lastServed = {},
+  lastServed,
   onRemove,
 }: {
   favorites: FavoriteDish[];
-  /** By normalized name; a favorite with no entry gets no line. */
+  /** By normalized name; a favorite with no entry gets no line. Absent while today's menus load. */
   lastServed?: Record<string, LastServed>;
   onRemove?: (normalizedName: string) => void;
 }) {
@@ -28,7 +32,11 @@ export function FavoritesList({
         <li key={dish.normalizedName} className="flex min-h-tap items-center justify-between gap-2">
           <div className="flex flex-col py-2">
             <span>{dish.name}</span>
-            <LastServedLine lastServed={lastServed[dish.normalizedName]} />
+            {lastServed ? (
+              <LastServedLine lastServed={lastServed[dish.normalizedName]} />
+            ) : (
+              <Bone className="my-0.5 h-4 w-56 max-w-full" />
+            )}
           </div>
           <Button
             type="button"

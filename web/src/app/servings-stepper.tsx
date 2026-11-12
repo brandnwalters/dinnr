@@ -1,6 +1,6 @@
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MAX_SERVINGS_PER_ENTRY, SERVINGS_STEP } from "@/lib/meal-log";
+import { SERVINGS_STEP } from "@/lib/meal-log";
 
 /** "½", "1", "1½", "2": servings in ½ steps as a mixed number. */
 export function servingsAmount(servings: number): string {
@@ -15,8 +15,7 @@ export function servingsText(servings: number): string {
 }
 
 /**
- * A − / + stepper for servings in ½ steps, from ½ up to the most one log entry
- * holds. The amount is announced as it changes. `label` names what's being
+ * A − / + stepper for servings in ½ steps, at least ½. The amount is announced as it changes. `label` names what's being
  * counted for assistive tech when there are several on screen.
  */
 export function ServingsStepper({
@@ -50,7 +49,6 @@ export function ServingsStepper({
         variant="outline"
         size="icon-tap"
         aria-label={`More servings${of}`}
-        disabled={value >= MAX_SERVINGS_PER_ENTRY}
         onClick={onChange && (() => onChange(value + SERVINGS_STEP))}
       >
         <Plus aria-hidden />

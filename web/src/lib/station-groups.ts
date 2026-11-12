@@ -94,13 +94,15 @@ export function todayPreview(
 export type NewTodayServing = { station: string; item: MenuItem };
 
 /**
- * The New today dishes among `stations` (any kind), in page order, each
- * listed once (at its first station) when it's served at more than one.
+ * The New today dishes among `stations` (main stations and bars; Extras are
+ * left off), in page order, each listed once (at its first station) when it's
+ * served at more than one.
  */
 export function newTodayDishes(stations: readonly Station[]): NewTodayServing[] {
   const seen = new Set<string>();
   const dishes: NewTodayServing[] = [];
   for (const station of stations) {
+    if (stationKind(station) === "extra") continue;
     for (const item of station.items) {
       if (!item.newToday || seen.has(item.normalizedName)) continue;
       seen.add(item.normalizedName);

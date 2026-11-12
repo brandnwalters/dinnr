@@ -4,7 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { MACROS, type Macro, type MacroRange, type MacroTargets } from "@/lib/combos";
 import type { TargetMode } from "@/lib/remaining-targets";
 import { SegmentedControl, type Segment } from "../segmented-control";
-import { MACRO_LABELS } from "./macro-labels";
+import { MACRO_LABELS } from "@/lib/macro-labels";
 
 /** The mode toggle's options, in order. */
 const MODE_SEGMENTS: readonly (Segment & { value: TargetMode })[] = [
