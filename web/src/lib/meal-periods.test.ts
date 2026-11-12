@@ -13,6 +13,7 @@ function hall(slug: string, meals: [string, string | null, string | null][], cur
     currentMealPeriod: current,
     selectedMealPeriod: current,
     favoriteCount: 0,
+    usualHours: [],
     mealPeriods: meals.map(([name, start, end]) => ({ name, start, end, favorites: [], stations: [] })),
   };
 }
