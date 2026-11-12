@@ -2,6 +2,7 @@ import { isAllergen, type Allergen } from "./allergens";
 import { query } from "./db";
 import { withSelectedMeal } from "./meal-periods";
 import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
+import { emptyWeek, getUsualHours, type UsualHours } from "./usual-hours";
 
 /**
  * Today data layer (server side): what each hall serves today, shaped the way
@@ -96,6 +97,8 @@ export type Hall = {
   /** Distinct favorites (by normalized name) shown in the selected meal period, after filters. */
   favoriteCount: number;
   mealPeriods: MealPeriod[];
+  /** The hall's usual week, Monday to Sunday, from recent saved days (`usual-hours.ts`). */
+  usualHours: UsualHours;
 };
 export type TodayMenu = { date: string; halls: Hall[] };
 
@@ -252,10 +255,11 @@ export async function getToday({
     if (item.favorite) mealPeriod.favorites.push({ station: station.name, item });
   }
 
+  const usualHours = await getUsualHours();
   const time = diningTime(now);
   return {
     date,
-    halls: [...halls.values()].map(({ slug, name, menuStatus, mealPeriods }) => {
+    halls: [...halls.entries()].map(([locationId, { slug, name, menuStatus, mealPeriods }]) => {
       const { status, current } = currentMeal(menuStatus, mealPeriods, time);
       const hall: Hall = {
         slug,
@@ -265,6 +269,7 @@ export async function getToday({
         selectedMealPeriod: current,
         favoriteCount: 0,
         mealPeriods,
+        usualHours: usualHours.get(locationId) ?? emptyWeek(),
       };
       return withSelectedMeal(hall, requested);
     }),
