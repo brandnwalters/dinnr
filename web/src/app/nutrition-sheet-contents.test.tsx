@@ -106,3 +106,21 @@ test("once loaded, shows the nutrition label and ingredients", () => {
   expect(shown).toContain("BLACK BEANS, BROWN RICE, ONION");
   expect(shown).not.toMatch(/loading nutrition/i);
 });
+
+test("says when and where the dish was last served, and nothing when there's no earlier record", () => {
+  const served = text(
+    renderToStaticMarkup(
+      <NutritionSheetContents
+        item={{
+          ...ITEM,
+          lastServed: { date: "2026-11-03", mealPeriod: "Dinner", hallSlug: "chase", hallName: "Chase" },
+        }}
+        nutrition={{ state: "loading" }}
+      />,
+    ),
+  );
+  const never = text(renderToStaticMarkup(<NutritionSheetContents item={ITEM} nutrition={{ state: "loading" }} />));
+
+  expect(served).toContain("Last served at Chase, Tue Nov 3, Dinner");
+  expect(never).not.toMatch(/last served/i);
+});

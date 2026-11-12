@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { DietChips } from "./diet-chips";
 import { FavoriteButton } from "./favorite-button";
@@ -5,7 +6,8 @@ import { NoMatchingItems } from "./menu-empty-states";
 import { NutritionSheet } from "./nutrition-sheet";
 import { stationAnchorId } from "@/lib/menus-link";
 import { hours, statusText, statusTone, type StatusTone } from "@/lib/hall-status";
-import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
+import { groupStations, stationPreview } from "@/lib/station-groups";
+import type { Hall, MealPeriod, MenuItem, Station } from "@/lib/today";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,39 +40,47 @@ const STATUS_PILL_CLASS: Record<StatusTone, string> = {
 /** The hall's status (wording from `statusText`) as a pill colored by status. */
 export function StatusPill({ hall }: { hall: Hall }) {
   return (
-    <p
+    <span
       data-status={hall.status}
-      className={cn("w-fit rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_PILL_CLASS[statusTone(hall)])}
+      className={cn(
+        "block w-fit rounded-full px-2.5 py-0.5 text-xs font-medium",
+        STATUS_PILL_CLASS[statusTone(hall)],
+      )}
     >
       {statusText(hall)}
-    </p>
+    </span>
   );
 }
 
 /**
  * The hall's name (an h2 with id `headingId`) and status pill, e.g. "Open now:
- * Lunch until 2:30pm", styled like the hall cards on Today.
+ * Lunch until 2:30pm", styled like the hall cards on Today. `status` replaces
+ * the plain pill (Today wraps it in a button).
  */
-export function HallMenuHeader({ hall, headingId }: { hall: Hall; headingId: string }) {
+export function HallMenuHeader({ hall, headingId, status }: { hall: Hall; headingId: string; status?: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
       <h2 id={headingId} className="text-lg font-semibold">
         {hall.name}
       </h2>
-      <StatusPill hall={hall} />
+      {status ?? <StatusPill hall={hall} />}
     </div>
   );
 }
 
-/** A meal period's name and hours, e.g. "Lunch · 11am–2:30pm" (just the name without readable times). */
-export function MealPeriodHeading({ mealPeriod }: { mealPeriod: MealPeriod }) {
+/**
+ * A meal period's name and hours, e.g. "Lunch · 11am–2:30pm" (just the name
+ * without readable times). `renderLabel` wraps that text (Today makes it a button).
+ */
+export function MealPeriodHeading({
+  mealPeriod,
+  renderLabel = (label) => label,
+}: {
+  mealPeriod: MealPeriod;
+  renderLabel?: (label: string) => ReactNode;
+}) {
   const time = hours(mealPeriod);
-  return (
-    <h3 className="text-sm font-medium">
-      {mealPeriod.name}
-      {time && ` · ${time}`}
-    </h3>
-  );
+  return <h3 className="text-sm font-medium">{renderLabel(time ? `${mealPeriod.name} · ${time}` : mealPeriod.name)}</h3>;
 }
 
 /**
@@ -114,10 +124,126 @@ function ItemRow({
   );
 }
 
+/** "1 item", "42 items". */
+export function itemCount(count: number): string {
+  return `${count} ${count === 1 ? "item" : "items"}`;
+}
+
+/** What a dish's row can do: star it, and log it ("I ate this", see `MealPeriodMenu`). */
+type DishActions = {
+  onToggleFavorite?: (item: MenuItem) => void;
+  onLogDish?: (item: MenuItem, servings: number) => void;
+};
+
+/** What every station on Menus is drawn from. */
+type StationProps = DishActions & {
+  station: Station;
+  /** See `MealPeriodMenu`. */
+  anchorHall?: string;
+};
+
+/** `station`'s deep-link anchor id, when the menu has anchors (`anchorHall`). */
+function anchorId(anchorHall: string | undefined, station: Station): string | undefined {
+  return anchorHall ? stationAnchorId(anchorHall, station.name) : undefined;
+}
+
+/** A list of dishes, one `ItemRow` each. */
+function ItemList({ items, ...actions }: { items: readonly MenuItem[] } & DishActions) {
+  return (
+    <ul>
+      {items.map((item) => (
+        <ItemRow key={item.recipeId} item={item} {...actions} />
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The tap target that expands a collapsed part of the menu: a native
+ * `<summary>` (announced as expandable, with its state), `children`, and a
+ * chevron that turns over while its `<details>` (which must have the `group`
+ * class) is open.
+ */
+function ExpandSummary({ className, children }: { className?: string; children: ReactNode }) {
+  return (
+    <summary
+      className={cn(
+        "flex min-h-tap cursor-pointer list-none items-center gap-2 rounded-md px-1 hover:bg-muted [&::-webkit-details-marker]:hidden",
+        className,
+      )}
+    >
+      <span className="flex-1">{children}</span>
+      <ChevronDown
+        aria-hidden
+        className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+      />
+    </summary>
+  );
+}
+
+/**
+ * A main station: its header pinned below the app header while its dishes
+ * scroll, then its collapsed preview (`stationPreview`: a few dishes,
+ * favorites first) and "Show all N", which opens the rest in place below.
+ */
+function MainStation({ station, anchorHall, ...actions }: StationProps) {
+  const { shown, rest } = stationPreview(station);
+  return (
+    <section id={anchorId(anchorHall, station)} className="scroll-mt-app-header">
+      <h4 className="sticky top-app-header z-1 bg-background py-2 font-semibold">{station.name}</h4>
+      <ItemList items={shown} {...actions} />
+      {rest.length > 0 && (
+        <details className="group">
+          <ExpandSummary className="text-sm font-medium group-open:hidden">
+            Show all {station.items.length}
+            <span className="sr-only"> {station.name} dishes</span>
+          </ExpandSummary>
+          <ItemList items={rest} {...actions} />
+        </details>
+      )}
+    </section>
+  );
+}
+
+/** A bar: one collapsed line, "Salad Bar · 42 items", that opens to all its dishes. */
+function Bar({ station, anchorHall, ...actions }: StationProps) {
+  return (
+    <details id={anchorId(anchorHall, station)} className="group scroll-mt-app-header border-b border-border/60">
+      <ExpandSummary>
+        <strong className="font-semibold">{station.name}</strong>{" "}
+        <span className="text-sm text-muted-foreground">· {itemCount(station.items.length)}</span>
+      </ExpandSummary>
+      <ItemList items={station.items} {...actions} />
+    </details>
+  );
+}
+
+/** The one collapsed Extras section, "Extras · 60 items", that opens to each of its stations in full. */
+function Extras({ stations, anchorHall, ...actions }: Omit<StationProps, "station"> & { stations: Station[] }) {
+  const count = stations.reduce((total, station) => total + station.items.length, 0);
+  return (
+    <details className="group">
+      <ExpandSummary>
+        <strong className="font-semibold">Extras</strong>{" "}
+        <span className="text-sm text-muted-foreground">· {itemCount(count)}</span>
+      </ExpandSummary>
+      {stations.map((station) => (
+        <section key={station.name} id={anchorId(anchorHall, station)} className="scroll-mt-app-header">
+          <h5 className="py-2 text-sm font-semibold">{station.name}</h5>
+          <ItemList items={station.items} {...actions} />
+        </section>
+      ))}
+    </details>
+  );
+}
+
 /**
  * One meal period's menu: its name and hours, the user's favorites first
- * ("Your favorites", each with its station), then every station in page order,
- * each station's header pinned below the app header while its dishes scroll.
+ * ("Your favorites", each with its station), then its stations grouped
+ * (`groupStations`): main stations in page order, each collapsed to a few
+ * dishes plus "Show all N"; then the bars, each collapsed to one line; then
+ * one collapsed Extras section. The collapsed parts are native `<details>`,
+ * which the station chips open when they jump into one (`revealStation`).
  */
 export function MealPeriodMenu({
   mealPeriod,
@@ -140,41 +266,31 @@ export function MealPeriodMenu({
   /** "I ate this" in a dish's nutrition sheet: log it from this meal period. */
   onLogDish?: (item: MenuItem, servings: number) => void;
 }) {
+  const { main, bars, extras } = groupStations(mealPeriod.stations);
+  const actions: DishActions = { onToggleFavorite, onLogDish };
   return (
     <section>
       <MealPeriodHeading mealPeriod={mealPeriod} />
-      {mealPeriod.stations.length === 0 && <NoMatchingItems onClearFilters={onClearFilters} />}
+      {main.length + bars.length + extras.length === 0 && <NoMatchingItems onClearFilters={onClearFilters} />}
       {mealPeriod.favorites.length > 0 && (
         <section>
           <h4 className="py-2 font-semibold">Your favorites</h4>
           <ul>
             {mealPeriod.favorites.map(({ station, item }) => (
-              <ItemRow
-                key={`${station}:${item.recipeId}`}
-                item={item}
-                onToggleFavorite={onToggleFavorite}
-                onLogDish={onLogDish}
-              >
+              <ItemRow key={`${station}:${item.recipeId}`} item={item} {...actions}>
                 <small className="text-muted-foreground">· {station}</small>
               </ItemRow>
             ))}
           </ul>
         </section>
       )}
-      {mealPeriod.stations.map((station) => (
-        <section
-          key={station.name}
-          id={anchorHall ? stationAnchorId(anchorHall, station.name) : undefined}
-          className="scroll-mt-app-header"
-        >
-          <h4 className="sticky top-app-header z-1 bg-background py-2 font-semibold">{station.name}</h4>
-          <ul>
-            {station.items.map((item) => (
-              <ItemRow key={item.recipeId} item={item} onToggleFavorite={onToggleFavorite} onLogDish={onLogDish} />
-            ))}
-          </ul>
-        </section>
+      {main.map((station) => (
+        <MainStation key={station.name} station={station} anchorHall={anchorHall} {...actions} />
       ))}
+      {bars.map((station) => (
+        <Bar key={station.name} station={station} anchorHall={anchorHall} {...actions} />
+      ))}
+      {extras.length > 0 && <Extras stations={extras} anchorHall={anchorHall} {...actions} />}
     </section>
   );
 }

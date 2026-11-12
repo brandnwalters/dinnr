@@ -2,6 +2,7 @@ import { isAllergen, type Allergen } from "./allergens";
 import { query } from "./db";
 import { withSelectedMeal } from "./meal-periods";
 import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
+import { emptyWeek, getUsualHours, type UsualHours } from "./usual-hours";
 
 /**
  * Today data layer (server side): what each hall serves today, shaped the way
@@ -15,11 +16,17 @@ import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
  * `preferences` (the on-device settings, validated with `parsePreferences`)
  * filter what's returned. Both filters are strict cutoffs: an item missing any
  * filtered diet tag, or carrying any chosen allergen, is left out, as is a
- * station left with no items. Allergen filtering relies on UNC's labels only:
+ * station left with no items. The names of the items they hid are kept per
+ * meal period (`MealPeriod.hiddenByFilters`), so search can say how many
+ * matches the filters hid without a second query. Allergen filtering relies on UNC's labels only:
  * the UI must show `AllergenDisclaimer` alongside it. Favorites (matched by
  * normalized name) are flagged where they're served, listed together at the
  * top of each meal period (`MealPeriod.favorites`, with their station) and
  * counted per hall. Stations and items otherwise keep page order.
+ *
+ * History comes from the saved menu days: each item, and each favorite
+ * (`TodayMenu.favoritesLastServed`), carries when it was last served before
+ * today at either hall.
  */
 
 import { DINING_TIME_ZONE, diningDate } from "./dining-date";
@@ -55,7 +62,15 @@ export type MenuItem = {
   dietaryTags: string[];
   allergens: Allergen[];
   nutrition?: ItemNutrition;
+  /** The most recent earlier serving of `normalizedName` at either hall; absent with no earlier record. */
+  lastServed?: LastServed;
 };
+/**
+ * A dish's most recent serving before today: its dining date (YYYY-MM-DD),
+ * meal period and hall. Taken from the saved menu days whatever the filters;
+ * today's own servings never count.
+ */
+export type LastServed = { date: string; mealPeriod: string; hallSlug: string; hallName: string };
 /**
  * `excludedFromCombos` is present (true) only for stations the scraper flagged
  * as not part of meal combos (condiments, beverages, cereal, ...).
@@ -66,6 +81,8 @@ export type FavoriteServing = { station: string; item: MenuItem };
 /**
  * `start`/`end` are local wall-clock times "HH:MM", or null if UNC's label had no readable hours.
  * `favorites`: the favorite items among `stations`, in page order, for the top of the hall's list.
+ * `hiddenByFilters`: the names of the items the diet and allergen filters left out, in page
+ * order (one per serving); absent when they left nothing out.
  */
 export type MealPeriod = {
   name: string;
@@ -73,6 +90,7 @@ export type MealPeriod = {
   end: string | null;
   favorites: FavoriteServing[];
   stations: Station[];
+  hiddenByFilters?: string[];
 };
 
 /** `menu_day.status`: whether UNC's page listed meal periods that day. */
@@ -98,8 +116,18 @@ export type Hall = {
   /** Distinct favorites (by normalized name) shown in the selected meal period, after filters. */
   favoriteCount: number;
   mealPeriods: MealPeriod[];
+  /** The hall's usual week, Monday to Sunday, from recent saved days (`usual-hours.ts`). */
+  usualHours: UsualHours;
 };
-export type TodayMenu = { date: string; halls: Hall[] };
+export type TodayMenu = {
+  date: string;
+  halls: Hall[];
+  /**
+   * Last served for each of the user's favorites (keyed by normalized name),
+   * whether or not it's served today; a favorite with no earlier record is left out.
+   */
+  favoritesLastServed: Record<string, LastServed>;
+};
 
 export type TodayOptions = {
   now: Date;
@@ -152,6 +180,7 @@ type Row = {
   item_name: string | null;
   recipe_id: number | null;
   normalized_name: string | null;
+  passes_filters: boolean | null;
   dietary_tags: string[] | null;
   allergens: string[] | null;
   has_nutrition: boolean;
@@ -164,6 +193,46 @@ type Row = {
 
 type HallRows = { slug: string; name: string; menuStatus: MenuStatus | null; mealPeriods: MealPeriod[] };
 
+type LastServedRow = {
+  normalized_name: string;
+  date: string;
+  meal_period_name: string;
+  slug: string;
+  location_name: string;
+};
+
+/**
+ * The most recent serving before `date`, at any hall, of each dish served on
+ * `date` and of each of `extraNames` (all by normalized name). Within one day
+ * the later meal period wins; a tie across halls goes to the first hall.
+ */
+async function lastServedBefore(date: string, extraNames: string[]): Promise<Map<string, LastServed>> {
+  const rows = await query<LastServedRow>(
+    `select distinct on (mi.normalized_name)
+            mi.normalized_name, to_char(md.date, 'YYYY-MM-DD') as date, mp.name as meal_period_name,
+            l.slug, l.name as location_name
+     from menu_item mi
+     join meal_period mp on mp.id = mi.meal_period_id
+     join menu_day md on md.id = mp.menu_day_id
+     join location l on l.id = md.location_id
+     where md.date < $1
+       and (mi.normalized_name = any($2::text[])
+            or mi.normalized_name in (
+              select t.normalized_name from menu_item t
+              join meal_period tmp on tmp.id = t.meal_period_id
+              join menu_day tmd on tmd.id = tmp.menu_day_id
+              where tmd.date = $1))
+     order by mi.normalized_name, md.date desc, mp.position desc, l.id`,
+    [date, extraNames],
+  );
+  return new Map(
+    rows.map((r) => [
+      r.normalized_name,
+      { date: r.date, mealPeriod: r.meal_period_name, hallSlug: r.slug, hallName: r.location_name },
+    ]),
+  );
+}
+
 export async function getToday({
   now,
   mealPeriod: requested,
@@ -175,6 +244,8 @@ export async function getToday({
             mp.id as meal_period_id, mp.name as meal_period_name, mp.start_time, mp.end_time,
             s.name as station_name, s.excluded_from_combos as station_excluded_from_combos, mi.name as item_name, mi.recipe_id,
             mi.normalized_name, mi.dietary_tags, mi.allergens,
+            (mi.dietary_tags @> $2::text[] -- diet filters: every one required
+             and not (mi.allergens && $3::text[])) as passes_filters, -- allergens: none of the chosen ones allowed
             rn.recipe_id is not null as has_nutrition, rn.serving_size,
             rn.calories::float8 as calories, rn.protein_g::float8 as protein_g,
             rn.total_carbohydrate_g::float8 as carbs_g, rn.total_fat_g::float8 as fat_g
@@ -182,8 +253,6 @@ export async function getToday({
      left join menu_day md on md.location_id = l.id and md.date = $1
      left join meal_period mp on mp.menu_day_id = md.id
      left join menu_item mi on mi.meal_period_id = mp.id
-       and mi.dietary_tags @> $2::text[] -- diet filters: every one required
-       and not (mi.allergens && $3::text[]) -- allergens: none of the chosen ones allowed
      left join station s on s.id = mi.station_id
      left join recipe_nutrition rn on rn.recipe_id = mi.recipe_id
      order by l.id, mp.position, mi.position`,
@@ -191,6 +260,7 @@ export async function getToday({
   );
 
   const favoriteNames = new Set(preferences.favorites.map((f) => f.normalizedName));
+  const lastServed = await lastServedBefore(date, [...favoriteNames]);
   const halls = new Map<number, HallRows>();
   const mealPeriods = new Map<number, MealPeriod>();
   for (const row of rows) {
@@ -214,6 +284,10 @@ export async function getToday({
       hall.mealPeriods.push(mealPeriod);
     }
     if (row.item_name === null) continue;
+    if (!row.passes_filters) {
+      (mealPeriod.hiddenByFilters ??= []).push(row.item_name);
+      continue;
+    }
 
     // Items are in page order, so a station's items are contiguous.
     let station = mealPeriod.stations.at(-1);
@@ -230,6 +304,8 @@ export async function getToday({
       dietaryTags: row.dietary_tags!,
       allergens: row.allergens!.filter(isAllergen),
     };
+    const served = lastServed.get(row.normalized_name!);
+    if (served) item.lastServed = served;
     if (row.has_nutrition) {
       item.nutrition = {
         servingSize: row.serving_size,
@@ -243,10 +319,18 @@ export async function getToday({
     if (item.favorite) mealPeriod.favorites.push({ station: station.name, item });
   }
 
+  const favoritesLastServed: Record<string, LastServed> = {};
+  for (const name of favoriteNames) {
+    const served = lastServed.get(name);
+    if (served) favoritesLastServed[name] = served;
+  }
+
+  const usualHours = await getUsualHours();
   const time = diningTime(now);
   return {
     date,
-    halls: [...halls.values()].map(({ slug, name, menuStatus, mealPeriods }) => {
+    favoritesLastServed,
+    halls: [...halls.entries()].map(([locationId, { slug, name, menuStatus, mealPeriods }]) => {
       const { status, current } = currentMeal(menuStatus, mealPeriods, time);
       const hall: Hall = {
         slug,
@@ -256,6 +340,7 @@ export async function getToday({
         selectedMealPeriod: current,
         favoriteCount: 0,
         mealPeriods,
+        usualHours: usualHours.get(locationId) ?? emptyWeek(),
       };
       return withSelectedMeal(hall, requested);
     }),

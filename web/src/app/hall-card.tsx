@@ -3,11 +3,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { menusHref } from "@/lib/menus-link";
-import { stationPreview } from "@/lib/station-preview";
+import { todayPreview } from "@/lib/station-groups";
 import type { Hall, MealPeriod } from "@/lib/today";
-import { HallMenuHeader, MealPeriodHeading } from "./hall-menu";
+import { HallMenuHeader, itemCount, MealPeriodHeading, StatusPill } from "./hall-menu";
 import { NotServing } from "./meal-period-switcher";
 import { allDayEmptyState, NoMatchingItems } from "./menu-empty-states";
+import { UsualHoursButton, UsualHoursSheet } from "./usual-hours-sheet";
 
 /**
  * "Your favorites here": the user's favorites in this meal period, each with
@@ -42,30 +43,36 @@ function Favorites({ mealPeriod, hasFavorites }: { mealPeriod: MealPeriod; hasFa
 }
 
 /**
- * The condensed menu: one line per station, its name in bold, then its first
- * few dishes and "+N more" (`stationPreview`). Each line opens Menus at that
- * station for this hall and meal period.
+ * The condensed menu (`todayPreview`): up to about five lines, one per main
+ * station with its name in bold, its first few dishes in page order and "+N
+ * more", then each bar as "<Station> · N items"; Extras are left off. Each line
+ * opens Menus at that station for this hall and meal period.
  */
 function StationPreviews({ hall, mealPeriod }: { hall: Hall; mealPeriod: MealPeriod }) {
+  const lines = todayPreview(mealPeriod.stations);
+  if (lines.length === 0) return null;
   return (
     <ul aria-label={`${hall.name} stations`} className="flex flex-col">
-      {mealPeriod.stations.map((station) => {
-        const { names, more } = stationPreview(station);
-        return (
-          <li key={station.name}>
-            <Link
-              href={menusHref({ hall: hall.slug, meal: mealPeriod.name, station: station.name })}
-              className="flex min-h-tap items-center rounded-md border-b border-border/60 px-1 py-1.5 text-sm hover:bg-muted"
-            >
-              <span>
-                <strong className="font-semibold">{station.name}</strong>{" "}
-                <span className="text-muted-foreground">{names.join(", ")}</span>
-                {more > 0 && <span className="text-muted-foreground"> +{more} more</span>}
-              </span>
-            </Link>
-          </li>
-        );
-      })}
+      {lines.map((line) => (
+        <li key={line.station.name}>
+          <Link
+            href={menusHref({ hall: hall.slug, meal: mealPeriod.name, station: line.station.name })}
+            className="flex min-h-tap items-center rounded-md border-b border-border/60 px-1 py-1.5 text-sm hover:bg-muted"
+          >
+            <span>
+              <strong className="font-semibold">{line.station.name}</strong>{" "}
+              {line.kind === "bar" ? (
+                <span className="text-muted-foreground">· {itemCount(line.count)}</span>
+              ) : (
+                <>
+                  <span className="text-muted-foreground">{line.shown.map((item) => item.name).join(", ")}</span>
+                  {line.more > 0 && <span className="text-muted-foreground"> +{line.more} more</span>}
+                </>
+              )}
+            </span>
+          </Link>
+        </li>
+      ))}
     </ul>
   );
 }
@@ -94,14 +101,24 @@ export function HallCard({
   const headingId = `today-hall-${hall.slug}`;
   return (
     <section aria-labelledby={headingId}>
-      <Card className="h-full gap-3">
-        <CardHeader>
-          <HallMenuHeader hall={hall} headingId={headingId} />
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <HallCardBody hall={hall} meal={meal} hasFavorites={hasFavorites} onClearFilters={onClearFilters} />
-        </CardContent>
-      </Card>
+      <UsualHoursSheet hall={hall}>
+        <Card className="h-full gap-3">
+          <CardHeader>
+            <HallMenuHeader
+              hall={hall}
+              headingId={headingId}
+              status={
+                <UsualHoursButton>
+                  <StatusPill hall={hall} />
+                </UsualHoursButton>
+              }
+            />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <HallCardBody hall={hall} meal={meal} hasFavorites={hasFavorites} onClearFilters={onClearFilters} />
+          </CardContent>
+        </Card>
+      </UsualHoursSheet>
     </section>
   );
 }
@@ -124,7 +141,7 @@ function HallCardBody({
   if (!mealPeriod) return meal && <NotServing mealPeriod={meal} />;
   return (
     <>
-      <MealPeriodHeading mealPeriod={mealPeriod} />
+      <MealPeriodHeading mealPeriod={mealPeriod} renderLabel={(label) => <UsualHoursButton>{label}</UsualHoursButton>} />
       {mealPeriod.stations.length === 0 ? (
         <NoMatchingItems onClearFilters={onClearFilters} />
       ) : (

@@ -1,6 +1,6 @@
 // UI smoke tests: the Menus screen (meal-period and hall switchers, "Not serving", favorites before the first station).
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import type { Hall, MealPeriod, MenuItem } from "@/lib/today";
 import { MenusScreen } from "./menus-screen";
 
@@ -28,6 +28,7 @@ const lenoir: Hall = {
   currentMealPeriod: "Lunch",
   selectedMealPeriod: "Lunch",
   favoriteCount: 1,
+  usualHours: [],
   mealPeriods: [
     meal("Lunch", "11:00", "14:30", [
       { name: "Grill", items: [item("Nashville Hot Chicken Biscuit", 15469)] },
@@ -44,6 +45,7 @@ const chase: Hall = {
   currentMealPeriod: "Late Lunch",
   selectedMealPeriod: "Late Lunch",
   favoriteCount: 0,
+  usualHours: [],
   mealPeriods: [
     meal("Late Lunch", "14:00", "16:30", [{ name: "Deli", items: [item("Turkey Club", 40001)] }]),
     meal("Dinner", "17:00", "21:00", [{ name: "Wok", items: [item("Lo Mein", 50001)] }]),
@@ -190,4 +192,85 @@ test("station chips follow the selected meal period", () => {
   const html = render({ meal: "Dinner" });
   expect(optionTag(html, "Top of Lenoir stations", "Grill")).toContain("meal=Dinner#station-top-of-lenoir-grill");
   expect(column(html, "Top of Lenoir")).not.toContain(">Pasta<");
+});
+
+describe("stations grouped as main stations, then bars, then Extras", () => {
+  const grouped: Hall = {
+    ...lenoir,
+    mealPeriods: [
+      meal("Lunch", "11:00", "14:30", [
+        { name: "Beverages", excludedFromCombos: true, items: [item("Milk", 60001), item("Orange Juice", 60002)] },
+        {
+          name: "Salad Bar",
+          items: [item("Lettuce", 61001), item("Tomato", 61002), item("Cucumber", 61003), item("Croutons", 61004)],
+        },
+        {
+          name: "Grill",
+          items: [
+            item("Burger", 62001),
+            item("Fries", 62002),
+            item("Hot Dog", 62003),
+            item("Onion Rings", 62004),
+            item("Veggie Burger", 62005, true),
+          ],
+        },
+        { name: "Cereal", excludedFromCombos: true, items: [item("Cheerios", 63001)] },
+        { name: "Pasta", items: [item("Penne Alfredo", 64001)] },
+      ]),
+    ],
+  };
+  const html = column(renderToStaticMarkup(<MenusScreen halls={[grouped, chase]} query={{}} />), "Top of Lenoir");
+  const at = (text: string) => html.indexOf(text);
+  /** The `<details>` element (not nested) whose summary contains `label` (looked for after the station chips). */
+  const details = (label: string) => {
+    const summaryEnd = html.indexOf("</summary>", html.indexOf(`>${label}`, at("</nav>")));
+    const summary = html.slice(0, summaryEnd).lastIndexOf("<summary");
+    const start = html.slice(0, summary).lastIndexOf("<details");
+    return html.slice(start, html.indexOf("</details>", summary) + "</details>".length);
+  };
+  const station = (slug: string) => `id="station-top-of-lenoir-${slug}"`;
+
+  test("main stations come first, then bars, then Extras, and the station chips follow that order", () => {
+    expect(at(station("grill"))).toBeGreaterThan(-1);
+    expect(at(station("grill"))).toBeLessThan(at(station("pasta")));
+    expect(at(station("pasta"))).toBeLessThan(at(station("salad-bar")));
+    expect(at(station("salad-bar"))).toBeLessThan(at(">Extras"));
+    expect(at(">Extras")).toBeLessThan(at(station("beverages")));
+    expect(at(station("beverages"))).toBeLessThan(at(station("cereal")));
+    const chips = html.slice(at('aria-label="Top of Lenoir stations"'), at("</nav>"));
+    expect(chips.match(/>[^<>]+<\/a>/g)).toEqual([">Grill</a>", ">Pasta</a>", ">Salad Bar</a>", ">Beverages</a>", ">Cereal</a>"]);
+  });
+
+  test("a bar is collapsed to one line with its item count and expands on tap", () => {
+    const bar = details("Salad Bar");
+    expect(bar).toMatch(/^<details(?![^>]*\sopen)[^>]*id="station-top-of-lenoir-salad-bar"/);
+    expect(bar).toMatch(/<summary[^>]*>.*Salad Bar.*· 4 items.*<\/summary>/);
+    expect(bar).toContain("Croutons");
+  });
+
+  test("the stations flagged excluded from combos sit in one collapsed Extras section with its item count", () => {
+    const extras = details("Extras");
+    expect(extras).toMatch(/^<details(?![^>]*\sopen)/);
+    expect(extras).toMatch(/<summary[^>]*>.*Extras.*· 3 items.*<\/summary>/);
+    expect(extras).toContain(station("beverages"));
+    expect(extras).toContain("Orange Juice");
+    expect(extras).toContain("Cheerios");
+    expect(html.match(/>Extras/g)).toHaveLength(1);
+  });
+
+  test("a main station shows three dishes, favorites first, and Show all N expands the rest in place", () => {
+    const grill = html.slice(at(station("grill")), at(station("pasta")));
+    const showAll = grill.indexOf("<details");
+    expect(grill.slice(0, showAll)).toMatch(/Veggie Burger.*Burger.*Fries/);
+    expect(grill.slice(0, showAll)).not.toContain("Hot Dog");
+    expect(grill.slice(showAll)).toMatch(
+      /^<details(?![^>]*\sopen)[^>]*><summary[^>]*>.*Show all 5.*<\/summary>.*Hot Dog.*Onion Rings/,
+    );
+    expect(html.slice(at(station("pasta")), at(station("salad-bar")))).not.toContain("Show all");
+  });
+
+  test("collapsed groups and stations are tap-target tall", () => {
+    for (const label of ["Salad Bar", "Extras"]) expect(details(label)).toMatch(/<summary[^>]*min-h-tap/);
+    expect(html).toMatch(/<summary[^>]*min-h-tap[^>]*>(?:(?!<\/summary>).)*Show all 5/);
+  });
 });

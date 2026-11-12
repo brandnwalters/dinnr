@@ -5,6 +5,7 @@ import { unloggableReason } from "@/lib/meal-log";
 import type { NutritionDetail } from "@/lib/nutrition-detail";
 import { dietaryTagLabel } from "@/lib/dietary-tags";
 import type { MenuItem } from "@/lib/today";
+import { LastServedLine } from "./last-served-line";
 import { NutritionLabel } from "./nutrition-label";
 import { ServingsStepper, servingsText } from "./servings-stepper";
 
@@ -16,8 +17,9 @@ export type NutritionLoad =
 
 /**
  * The body of a dish's nutrition sheet: a star to favorite it, its diet tags
- * by full name (menu chips may abbreviate them), "I ate this" with a servings
- * stepper (when `onLog` is given), and its nutrition label.
+ * by full name (menu chips may abbreviate them), when it was last served,
+ * "I ate this" with a servings stepper (when `onLog` is given), and its
+ * nutrition label.
  * Presentational, so it renders to static markup in tests; `NutritionSheet`
  * wraps it in the dialog and does the fetching.
  */
@@ -57,6 +59,7 @@ export function NutritionSheetContents({
           </ul>
         )}
       </div>
+      <LastServedLine lastServed={item.lastServed} />
       {onLog && <LogDish item={item} onLog={onLog} />}
       {nutrition.state === "loading" && <p className="text-muted-foreground">Loading nutrition…</p>}
       {nutrition.state === "error" && <p>Couldn&apos;t load nutrition. Try again later.</p>}

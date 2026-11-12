@@ -9,6 +9,7 @@ import { clearFilters } from "@/lib/preferences";
 import { usePreferences } from "@/lib/preferences-store";
 import { hallQuery } from "../hall-columns";
 import { MenuSkeleton } from "../menu-skeleton";
+import { revealStation } from "../station-chips";
 import { useTodayMenu } from "../today-menu-provider";
 import { MenusScreen } from "./menus-screen";
 
@@ -36,13 +37,14 @@ export function MenusView() {
 }
 
 /**
- * Scrolls to the URL fragment's element once `shown` turns true. A deep link
+ * Scrolls to the URL fragment's element once `shown` turns true, first
+ * opening the bar or Extras it is collapsed in (`revealStation`). A deep link
  * opened fresh arrives before the menu has loaded (only skeletons on screen),
  * so the browser's own jump to the fragment finds nothing; this repeats it.
  */
 function useScrollToHashOnceShown(shown: boolean) {
   useEffect(() => {
     if (!shown || window.location.hash.length < 2) return;
-    document.getElementById(decodeURIComponent(window.location.hash.slice(1)))?.scrollIntoView();
+    revealStation(decodeURIComponent(window.location.hash.slice(1)))?.scrollIntoView();
   }, [shown]);
 }

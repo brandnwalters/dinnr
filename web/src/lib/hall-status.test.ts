@@ -24,6 +24,7 @@ test("closed, done-for-today and no-menu halls share the closed tone", () => {
     currentMealPeriod: null,
     selectedMealPeriod: null,
     favoriteCount: 0,
+    usualHours: [],
     mealPeriods: [],
   });
   expect(statusTone(hall("serving"))).toBe("serving");

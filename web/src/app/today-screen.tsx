@@ -2,6 +2,7 @@ import { mealPeriodNames, selectedMealPeriod } from "@/lib/meal-periods";
 import type { Hall } from "@/lib/today";
 import { cn } from "@/lib/utils";
 import { HALL_GRID_CLASS } from "./hall-columns";
+import { FavoritesStrip } from "./favorites-strip";
 import { HallCard } from "./hall-card";
 import { MealPeriodSwitcher } from "./meal-period-switcher";
 
@@ -10,10 +11,10 @@ export type TodayQuery = { meal?: string };
 
 /**
  * The Today tab, a head-to-head to pick a hall in seconds: the shared
- * meal-period switcher, then one card per hall for that meal period (stacked
- * on phones and tablets, side by side from ~1024px up like Menus). Each card links into the
- * hall's full menu on Menus. Presentational: the URL and the menu come in as
- * props.
+ * meal-period switcher, the favorites strip comparing the halls, then one
+ * card per hall for that meal period (stacked on phones and tablets, side by
+ * side from ~1024px up like Menus). Each card links into the hall's full menu
+ * on Menus. Presentational: the URL and the menu come in as props.
  */
 export function TodayScreen({
   halls,
@@ -33,6 +34,7 @@ export function TodayScreen({
   return (
     <div className="flex flex-col gap-4">
       <MealPeriodSwitcher mealPeriods={mealPeriodNames(halls)} selected={meal} query={links} />
+      <FavoritesStrip halls={halls} meal={meal} />
       <div className={cn(HALL_GRID_CLASS, "gap-4")}>
         {halls.map((hall) => (
           <HallCard
