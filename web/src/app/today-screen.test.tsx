@@ -140,6 +140,43 @@ test("each card previews one line per station: its first dishes and how many mor
   expect(short).not.toContain("more");
 });
 
+test("a card's preview leaves Extras off and sums up each bar in one line that deep-links to it", () => {
+  const brunch = lenoir.mealPeriods[0];
+  const withExtras: Hall = {
+    ...lenoir,
+    mealPeriods: [
+      {
+        ...brunch,
+        stations: [
+          { name: "Beverages", excludedFromCombos: true, items: [item("Whole Milk", 20)] },
+          { name: "Waffle Bar", items: [item("Belgian Waffle", 21), item("Maple Syrup", 22), item("Whipped Cream", 23)] },
+          ...brunch.stations,
+        ],
+      },
+    ],
+  };
+  const lenoirCard = card(render([withExtras]), "Top of Lenoir");
+  expect(lenoirCard).not.toContain("Beverages");
+  expect(lenoirCard).not.toContain("Whole Milk");
+  expect(lenoirCard).toMatch(/Simply Prepared &amp; Grill.*Waffle Bar.*· 3 items/);
+  expect(lenoirCard).not.toContain("Belgian Waffle");
+  expect(linkTag(lenoirCard, "Waffle Bar")).toContain(
+    'href="/menus?hall=top-of-lenoir&amp;meal=Brunch#station-top-of-lenoir-waffle-bar"',
+  );
+});
+
+test("a card's preview stops at five stations, then See full menu", () => {
+  const many = ["Grill", "Pasta", "Wok", "Pizza", "Deli", "Soup"].map((name, i) => ({
+    name,
+    items: [item(`${name} Special`, 30 + i)],
+  }));
+  const busy: Hall = { ...chase, mealPeriods: [meal("Late Lunch", "14:00", "16:30", many)] };
+  const chaseCard = card(render([busy]), "Chase");
+  expect(chaseCard).toContain("Deli Special");
+  expect(chaseCard).not.toContain("Soup");
+  expect(chaseCard.indexOf("Deli Special")).toBeLessThan(chaseCard.indexOf("See full menu"));
+});
+
 test("each station deep-links into Menus at that station, for that hall and meal period", () => {
   const html = render([lenoir, chase], { meal: "Dinner" });
   expect(linkTag(card(html, "Chase"), "Wok")).toContain('href="/menus?hall=chase&amp;meal=Dinner#station-chase-wok"');

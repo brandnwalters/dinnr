@@ -111,7 +111,7 @@ function ItemRow({
 }
 
 /** "1 item", "42 items". */
-function itemCount(count: number): string {
+export function itemCount(count: number): string {
   return `${count} ${count === 1 ? "item" : "items"}`;
 }
 
