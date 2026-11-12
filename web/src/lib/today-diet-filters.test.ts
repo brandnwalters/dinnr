@@ -98,5 +98,14 @@ test("a meal period with nothing matching the filters is still listed, with no s
     preferences: { ...DEFAULT_PREFERENCES, dietFilters: ["organic"] },
   });
 
-  expect(today.halls[0].mealPeriods).toEqual([{ name: "Brunch", start: null, end: null, favorites: [], stations: [] }]);
+  expect(today.halls[0].mealPeriods).toEqual([
+    {
+      name: "Brunch",
+      start: null,
+      end: null,
+      favorites: [],
+      stations: [],
+      hiddenByFilters: ["Nashville Hot Chicken Biscuit", "Black Bean Burger Patty", "Waffle", "Whole Milk"],
+    },
+  ]);
 });

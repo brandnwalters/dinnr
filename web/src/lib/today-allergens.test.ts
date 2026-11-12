@@ -112,6 +112,20 @@ test("allergen and diet filters apply together", async () => {
   });
 
   expect(stationItems(today)).toEqual([["Waffle Bar", ["Waffle", "Strawberries"]]]);
+  // Search counts what the filters hid, so the names come along (in page order).
+  expect(today.halls[0].mealPeriods[0].hiddenByFilters).toEqual(["Whipped Topping", "Bacon"]);
+});
+
+test("nothing is listed as hidden when the filters hide nothing", async () => {
+  await seedMenuDay({
+    location: LENOIR,
+    date: "2026-11-07",
+    mealPeriods: [{ name: "Brunch", stations: [{ name: "Fruit", items: [{ name: "Strawberries", recipeId: 1 }] }] }],
+  });
+
+  const today = await getToday({ now: SAT_LUNCHTIME, preferences: { ...DEFAULT_PREFERENCES, allergens: ["soy"] } });
+
+  expect(today.halls[0].mealPeriods[0].hiddenByFilters).toBeUndefined();
 });
 
 test("a meal period where every item has a chosen allergen is still listed, with no stations", async () => {
@@ -128,5 +142,7 @@ test("a meal period where every item has a chosen allergen is still listed, with
 
   const today = await getToday({ now: SAT_LUNCHTIME, preferences: { ...DEFAULT_PREFERENCES, allergens: ["wheat"] } });
 
-  expect(today.halls[0].mealPeriods).toEqual([{ name: "Brunch", start: null, end: null, favorites: [], stations: [] }]);
+  expect(today.halls[0].mealPeriods).toEqual([
+    { name: "Brunch", start: null, end: null, favorites: [], stations: [], hiddenByFilters: ["Waffle"] },
+  ]);
 });
