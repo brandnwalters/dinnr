@@ -312,6 +312,34 @@ describe("New today on the hall cards", () => {
     expect(lenoirCard).toMatch(/>New today</);
   });
 
+  test("a card leaves New today dishes from Extras stations off its list", () => {
+    const withNewExtra: Hall = {
+      ...lenoir,
+      mealPeriods: [
+        meal("Brunch", "10:30", "15:00", [
+          { name: "The Grill", items: [isNew(item("Jerk Chicken", 2))] },
+          { name: "Beverages", excludedFromCombos: true, items: [isNew(item("Mango Lassi", 5))] },
+        ]),
+      ],
+    };
+    const list = newToday(card(render([withNewExtra, chase]), "Top of Lenoir"));
+    expect(list).toContain("Jerk Chicken · The Grill");
+    expect(list).not.toContain("Mango Lassi");
+  });
+
+  test("a card whose only New today dishes are Extras shows no New today list", () => {
+    const onlyExtra: Hall = {
+      ...lenoir,
+      mealPeriods: [
+        meal("Brunch", "10:30", "15:00", [
+          { name: "The Grill", items: [item("Buttermilk Pancake", 1)] },
+          { name: "Beverages", excludedFromCombos: true, items: [isNew(item("Mango Lassi", 5))] },
+        ]),
+      ],
+    };
+    expect(card(render([onlyExtra, chase]), "Top of Lenoir")).not.toContain("New today");
+  });
+
   test("a card with no New today dishes in the selected meal (after filters) shows nothing", () => {
     expect(card(render([withNew, chase], { meal: "Dinner" }), "Top of Lenoir")).not.toContain("New today");
     expect(card(render(), "Top of Lenoir")).not.toContain("New today");
