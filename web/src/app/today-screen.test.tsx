@@ -1,6 +1,6 @@
 // UI smoke tests: Today's head-to-head hall cards (status pill, hours, favorites, trimmed preview, deep links) and the favorites strip.
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import type { Hall, HallStatus, MealPeriod, MenuItem } from "@/lib/today";
 import { TodayScreen } from "./today-screen";
 
@@ -277,4 +277,64 @@ test("each card's status pill and hours line open that hall's Usual hours", () =
   expect(triggers[0]).toContain("Open now: Brunch until 3pm");
   expect(triggers[1]).toContain("Brunch · 10:30am–3pm");
   for (const trigger of triggers) expect(trigger).toContain("Usual hours for Top of Lenoir");
+});
+
+describe("New today on the hall cards", () => {
+  const isNew = (i: MenuItem): MenuItem => ({ ...i, newToday: true });
+  const withNew: Hall = {
+    ...lenoir,
+    mealPeriods: [
+      meal("Brunch", "10:30", "15:00", [
+        { name: "The Grill", items: [item("Buttermilk Pancake", 1), isNew(item("Jerk Chicken", 2))] },
+        { name: "Global", items: [isNew(item("Sushi Roll", 3)), isNew(item("Jerk Chicken", 4))] },
+      ]),
+      meal("Dinner", "17:00", "20:00", [{ name: "The Grill", items: [item("Cheeseburger", 8)] }]),
+    ],
+  };
+
+  /** A card's New today list as text, or "" when it has none. */
+  function newToday(cardHtml: string): string {
+    const start = cardHtml.indexOf('aria-label="New today at');
+    if (start === -1) return "";
+    return cardHtml
+      .slice(cardHtml.indexOf(">", start) + 1, cardHtml.indexOf("</ul>", start))
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ");
+  }
+
+  test("a card lists the selected meal's New today dishes once each, with their station", () => {
+    const lenoirCard = card(render([withNew, chase]), "Top of Lenoir");
+    const list = newToday(lenoirCard);
+    expect(list).toContain("Jerk Chicken · The Grill");
+    expect(list).toContain("Sushi Roll · Global");
+    expect(list.match(/Jerk Chicken/g)).toHaveLength(1);
+    expect(list).not.toContain("Buttermilk Pancake");
+    expect(lenoirCard).toMatch(/>New today</);
+  });
+
+  test("a card with no New today dishes in the selected meal (after filters) shows nothing", () => {
+    expect(card(render([withNew, chase], { meal: "Dinner" }), "Top of Lenoir")).not.toContain("New today");
+    expect(card(render(), "Top of Lenoir")).not.toContain("New today");
+  });
+
+  test("the New today list takes one of the card's five lines, ahead of the station preview", () => {
+    const many = ["Grill", "Pasta", "Wok", "Pizza", "Deli", "Soup"].map((name, i) => ({
+      name,
+      items: [item(`${name} Special`, 30 + i)],
+    }));
+    const busy: Hall = {
+      ...chase,
+      mealPeriods: [
+        meal("Late Lunch", "14:00", "16:30", [
+          { ...many[0], items: [...many[0].items, isNew(item("Jerk Chicken", 40)), isNew(item("Sushi Roll", 41))] },
+          ...many.slice(1),
+        ]),
+      ],
+    };
+    const chaseCard = card(render([busy]), "Chase");
+    expect(newToday(chaseCard)).toContain("Jerk Chicken");
+    expect(chaseCard.indexOf("New today")).toBeLessThan(chaseCard.indexOf("Grill Special"));
+    expect(chaseCard).toContain("Pizza Special");
+    expect(chaseCard).not.toContain("Deli Special");
+  });
 });
