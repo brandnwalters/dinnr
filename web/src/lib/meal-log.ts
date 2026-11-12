@@ -1,6 +1,6 @@
-import { MACROS, type Macros } from "./combos";
+import { MACROS, type Combo, type Macros } from "./combos";
 import { diningDate } from "./dining-date";
-import type { MenuItem } from "./today";
+import type { MealPeriod, MenuItem } from "./today";
 
 /**
  * The meal log (on the device, no account): the hall dishes the student ate,
@@ -136,6 +136,22 @@ export function addEntry(log: MealLog, { item, hall, mealPeriod, servings }: Dis
     perServing,
   };
   return { entries: [...log.entries, entry] };
+}
+
+/** What "Log this combo" logs: a suggested combo from one hall's meal period. */
+export type ComboToLog = { combo: Combo; mealPeriod: MealPeriod; hall: LoggedHall };
+
+/**
+ * `log` with one entry per item of `combo`, at its combo servings, on the
+ * dining day at `now`. Each item is logged as the meal period's dish with its
+ * recipe ID (the combo engine works from those dishes).
+ */
+export function addCombo(log: MealLog, { combo, mealPeriod, hall }: ComboToLog, now: Date): MealLog {
+  const dishes = new Map(mealPeriod.stations.flatMap((s) => s.items.map((item) => [item.recipeId, item] as const)));
+  return combo.items.reduce((acc, { item: { id }, servings }) => {
+    const item = dishes.get(id);
+    return item ? addEntry(acc, { item, hall, mealPeriod: mealPeriod.name, servings }, now) : acc;
+  }, log);
 }
 
 /** `log` with entry `id` set to `servings` (unchanged if that isn't a loggable amount). */

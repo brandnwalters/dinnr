@@ -1,13 +1,12 @@
 // UI smoke tests: the Macros screen (today's log and progress, past 7 days, daily targets card, combo cards per
-// hall with totals against the targets, empty states).
+// hall with totals against the targets used, "Log this combo", the fill-what's-left / per-meal toggle, empty states).
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import type { Allergen } from "@/lib/allergens";
-import type { MacroTargets } from "@/lib/combos";
-import { addEntry, EMPTY_MEAL_LOG, type MealLog } from "@/lib/meal-log";
+import { comboItemsFrom, suggestCombos, type MacroTargets } from "@/lib/combos";
+import { addCombo, addEntry, EMPTY_MEAL_LOG, type MealLog } from "@/lib/meal-log";
 import type { Hall, MenuItem } from "@/lib/today";
-import type { HallQuery } from "../hall-columns";
-import { MacrosScreen } from "./macros-screen";
+import { MacrosScreen, type MacrosQuery } from "./macros-screen";
 
 const food = (name: string, recipeId: number, calories: number, proteinG: number): MenuItem => ({
   name,
@@ -52,7 +51,7 @@ const render = (
   {
     includeExcludedStations = false,
     allergens = [] as Allergen[],
-    query = {} as HallQuery,
+    query = { mode: "left" } as MacrosQuery, // targets as given unless a test picks a mode
     halls = HALLS,
     log = EMPTY_MEAL_LOG as MealLog,
   } = {},
@@ -342,4 +341,60 @@ test("'Past 7 days' is collapsed, lists each earlier day's totals, and opens to 
   expect(days.indexOf("Nov 10")).toBeLessThan(days.indexOf("Nov 4"));
   expect(past).toMatch(/aria-label="Delete Rice"/);
   expect(past).toMatch(/aria-label="Fewer servings of Rice"/);
+});
+
+test("each combo card has 'Log this combo', and a logged combo shows in today's meals and totals", () => {
+  const html = render({ proteinG: { min: 30 } });
+  expect(html.match(/<button[^>]*>Log this combo<\/button>/g)).toHaveLength(html.match(/aria-label="Totals"/g)!.length);
+
+  const dinner = HALLS[0].mealPeriods[1];
+  // 1× Grilled Chicken + 1× Rice: 340 cal, 29 g protein.
+  const [combo] = suggestCombos({ items: comboItemsFrom(dinner), targets: { proteinG: { min: 29, max: 29 } } }).combos;
+  const log = addCombo(EMPTY_MEAL_LOG, { combo, mealPeriod: dinner, hall: LENOIR }, evening("2026-11-11"));
+  const after = render({ calories: { max: 2000 } }, { log });
+
+  const meals = text(section(after, "Today&#x27;s meals"));
+  expect(meals).toMatch(/Dinner Grilled Chicken Top of Lenoir · 140 cal .* Rice Top of Lenoir · 200 cal/);
+  expect(text(section(after, "Today"))).toContain("340 of ≤ 2000 cal");
+});
+
+test("the targets card toggles between 'Fill what's left today' and 'Per meal', and suggestions follow", () => {
+  const targets = { proteinG: { min: 40, max: 60 } };
+  const left = render(targets, { query: { mode: "left" } });
+  const perMeal = render(targets, { query: { mode: "per-meal" } });
+
+  expect(optionTag(left, "Size combos", "Fill what&#x27;s left today")).toContain('aria-current="true"');
+  expect(optionTag(left, "Size combos", "Per meal")).toContain('href="?mode=per-meal"');
+  expect(optionTag(perMeal, "Size combos", "Per meal")).toContain('aria-current="true"');
+  // The whole day's 40–60 g, or half of it for each of Lenoir's two meal periods (Lunch, Dinner).
+  expect(chips(column(left, "Top of Lenoir"))).toContain("50 g protein (target 40–60, within target)");
+  expect(chips(column(perMeal, "Top of Lenoir"))).toContain("25 g protein (target 20–30, within target)");
+  expect(chips(column(perMeal, "Top of Lenoir"))).not.toContain("50 g protein (target 20–30)");
+
+  // A third of 100 g per meal for a hall serving three meal periods, shown rounded.
+  const brunch = { name: "Brunch", start: "10:00", end: "13:00", favorites: [], stations: [{ name: "Grill", items: [food("Omelet", 7, 300, 40)] }] };
+  const halls = [{ ...HALLS[0], mealPeriods: [...HALLS[0].mealPeriods, brunch] }, HALLS[1]];
+  const thirds = render({ proteinG: { min: 100 } }, { halls, query: { meal: "Brunch", mode: "per-meal" } });
+  expect(chips(column(thirds, "Top of Lenoir"))).toContain("40 g protein (target ≥ 33.3, within target)");
+});
+
+test("the mode defaults to 'Fill what's left today' once something is logged today, else 'Per meal'", () => {
+  const targets = { proteinG: { min: 100, max: 120 } };
+  const fresh = render(targets, { query: {} });
+  // Today: 84 g protein logged (Lunch at Lenoir, Dinner at Chase), so 16–36 g is left.
+  const logged = render(targets, { query: {}, log: LOG });
+
+  expect(optionTag(fresh, "Size combos", "Per meal")).toContain('aria-current="true"');
+  expect(optionTag(logged, "Size combos", "Fill what&#x27;s left today")).toContain('aria-current="true"');
+  expect(chips(column(logged, "Chase"))).toContain("34 g protein (target 16–36, within target)");
+});
+
+test("a daily max already reached says so instead of suggesting combos", () => {
+  // Today: 580 cal logged.
+  const html = render({ calories: { max: 500 }, proteinG: { min: 30 } }, { log: LOG });
+
+  expect(text(html).replaceAll("&#x27;", "'")).toContain(
+    "You've reached today's calorie maximum (500 cal), so there's nothing left to fill.",
+  );
+  expect(html).not.toContain('aria-label="Totals"');
 });

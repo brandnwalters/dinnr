@@ -3,7 +3,9 @@
 // in-memory stand-in for localStorage).
 import { expect, test } from "vitest";
 import { memoryStorage } from "../../test/memory-storage";
+import { comboItemsFrom, suggestCombos } from "./combos";
 import {
+  addCombo,
   addEntry,
   changeServings,
   dayTotals,
@@ -18,7 +20,7 @@ import {
 } from "./meal-log";
 import { createMealLogStore } from "./meal-log-store";
 import { PREFERENCES_STORAGE_KEY } from "./preferences";
-import type { MenuItem } from "./today";
+import type { MealPeriod, MenuItem } from "./today";
 
 const CHICKEN: MenuItem = {
   name: "Grilled Chicken Breast",
@@ -224,4 +226,30 @@ test("servings are logged in ½ steps, at least ½", () => {
   for (const bad of [0, -1, 0.25, 1.3, Number.NaN]) {
     expect(addEntry(EMPTY_MEAL_LOG, dish(CHICKEN, bad), EVENING)).toEqual(EMPTY_MEAL_LOG);
   }
+});
+
+test("logging a combo adds one entry per item at its combo servings, tagged with the hall and meal period", () => {
+  const rice: MenuItem = {
+    ...CHICKEN,
+    name: "Rice",
+    recipeId: 2,
+    normalizedName: "rice",
+    nutrition: { servingSize: "1 cup", calories: 200, proteinG: 4, carbsG: 45, fatG: 0.5 },
+  };
+  const dinner: MealPeriod = {
+    name: "Dinner",
+    start: "17:00",
+    end: "20:00",
+    favorites: [],
+    stations: [{ name: "Grill", items: [CHICKEN, rice] }],
+  };
+  // The only combo with exactly 54 g protein: 2× Chicken (50 g) + 1× Rice (4 g).
+  const [combo] = suggestCombos({ items: comboItemsFrom(dinner), targets: { proteinG: { min: 54, max: 54 } } }).combos;
+  const log = addCombo(EMPTY_MEAL_LOG, { combo, mealPeriod: dinner, hall: { slug: "chase", name: "Chase" } }, EVENING);
+
+  expect(log.entries.map(({ name, servings, hall, mealPeriod, date }) => ({ name, servings, hall, mealPeriod, date }))).toEqual([
+    { name: "Grilled Chicken Breast", servings: 2, hall: { slug: "chase", name: "Chase" }, mealPeriod: "Dinner", date: "2026-11-11" },
+    { name: "Rice", servings: 1, hall: { slug: "chase", name: "Chase" }, mealPeriod: "Dinner", date: "2026-11-11" },
+  ]);
+  expect(dayTotals(log, "2026-11-11")).toEqual({ calories: 480, proteinG: 54, carbsG: 45, fatG: 7.5 });
 });

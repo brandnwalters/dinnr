@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MACROS, type Combo, type MacroRange, type MacroTargets } from "@/lib/combos";
 import { cn } from "@/lib/utils";
@@ -14,9 +15,11 @@ function withinTarget(total: number, range: MacroRange | undefined): boolean {
  * One suggested combo: its items with servings ("2× Grilled Chicken Breast")
  * and its calorie, protein, carb and fat totals as chips. A chip whose macro
  * has a target shows it ("50 g protein (target ≥ 30)"); one that meets it is
- * drawn in the accent and says "within target" to assistive tech.
+ * drawn in the accent and says "within target" to assistive tech. `targets`
+ * are the ones this suggestion was made for (what's left of the daily ones).
+ * "Log this combo" calls `onLog` (inert without it).
  */
-export function ComboCard({ combo, targets }: { combo: Combo; targets: MacroTargets }) {
+export function ComboCard({ combo, targets, onLog }: { combo: Combo; targets: MacroTargets; onLog?: () => void }) {
   return (
     <Card size="sm">
       <CardContent className="flex flex-col gap-2">
@@ -51,6 +54,9 @@ export function ComboCard({ combo, targets }: { combo: Combo; targets: MacroTarg
             );
           })}
         </ul>
+        <Button type="button" variant="outline" className="min-h-tap self-start" onClick={onLog}>
+          Log this combo
+        </Button>
       </CardContent>
     </Card>
   );
