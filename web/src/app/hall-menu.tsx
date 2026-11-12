@@ -30,6 +30,16 @@ function MacroSummary({ item }: { item: MenuItem }) {
   );
 }
 
+/**
+ * The "New today" tag on a dish's row: plain text, so a screen reader reads it
+ * out with the dish's name.
+ */
+function NewTodayTag() {
+  return (
+    <span className="rounded-sm bg-brand px-1 text-xs leading-5 font-semibold text-brand-foreground">New today</span>
+  );
+}
+
 /** The status theme tokens each status tone is drawn in. */
 const STATUS_PILL_CLASS: Record<StatusTone, string> = {
   serving: "bg-status-serving text-status-serving-foreground",
@@ -85,7 +95,8 @@ export function MealPeriodHeading({
 
 /**
  * One dish as a compact line (at least a tap target tall): the name (opens its
- * nutrition; wraps, never truncated), `children`, abbreviated diet chips, then
+ * nutrition; wraps, never truncated), `children`, a "New today" tag when the
+ * dish is new at its hall, abbreviated diet chips, then
  * calories and protein right-aligned, and the star on the far right.
  * Favorites are tinted with the brand accent wherever they appear.
  */
@@ -110,6 +121,7 @@ function ItemRow({
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 py-1 text-sm break-words">
         <NutritionSheet item={item} onToggleFavorite={onToggleFavorite} />
         {children}
+        {item.newToday && <NewTodayTag />}
         <DietChips tags={item.dietaryTags} />
       </div>
       <MacroSummary item={item} />
