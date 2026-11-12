@@ -336,8 +336,8 @@ test("'Past 7 days' is collapsed, lists each earlier day's totals, and opens to 
   expect(past).toContain(">Past 7 days<");
   const days = text(past);
   // Yesterday: 1½× Rice (200 cal, 4 g protein, 10 g carbs, 5 g fat).
-  expect(days).toMatch(/Tue, Nov 10 · 300 cal · 6 g protein · 15 g carbs · 7.5 g fat/);
-  expect(days).toMatch(/Wed, Nov 4 · 300 cal · 34 g protein/);
+  expect(days).toMatch(/Tue Nov 10 · 300 cal · 6 g protein · 15 g carbs · 7.5 g fat/);
+  expect(days).toMatch(/Wed Nov 4 · 300 cal · 34 g protein/);
   expect(days.indexOf("Nov 10")).toBeLessThan(days.indexOf("Nov 4"));
   expect(past).toMatch(/aria-label="Delete Rice"/);
   expect(past).toMatch(/aria-label="Fewer servings of Rice"/);
