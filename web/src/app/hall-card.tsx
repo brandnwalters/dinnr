@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { menusHref } from "@/lib/menus-link";
-import { stationPreview } from "@/lib/station-preview";
+import { stationPreview } from "@/lib/station-groups";
 import type { Hall, MealPeriod } from "@/lib/today";
 import { HallMenuHeader, MealPeriodHeading, StatusPill } from "./hall-menu";
 import { NotServing } from "./meal-period-switcher";
@@ -44,14 +44,14 @@ function Favorites({ mealPeriod, hasFavorites }: { mealPeriod: MealPeriod; hasFa
 
 /**
  * The condensed menu: one line per station, its name in bold, then its first
- * few dishes and "+N more" (`stationPreview`). Each line opens Menus at that
+ * few dishes in page order and "+N more" (`stationPreview`). Each line opens Menus at that
  * station for this hall and meal period.
  */
 function StationPreviews({ hall, mealPeriod }: { hall: Hall; mealPeriod: MealPeriod }) {
   return (
     <ul aria-label={`${hall.name} stations`} className="flex flex-col">
       {mealPeriod.stations.map((station) => {
-        const { names, more } = stationPreview(station);
+        const { shown, rest } = stationPreview(station, { favoritesFirst: false });
         return (
           <li key={station.name}>
             <Link
@@ -60,8 +60,8 @@ function StationPreviews({ hall, mealPeriod }: { hall: Hall; mealPeriod: MealPer
             >
               <span>
                 <strong className="font-semibold">{station.name}</strong>{" "}
-                <span className="text-muted-foreground">{names.join(", ")}</span>
-                {more > 0 && <span className="text-muted-foreground"> +{more} more</span>}
+                <span className="text-muted-foreground">{shown.map((item) => item.name).join(", ")}</span>
+                {rest.length > 0 && <span className="text-muted-foreground"> +{rest.length} more</span>}
               </span>
             </Link>
           </li>

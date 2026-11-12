@@ -59,3 +59,18 @@ test("while preferences load, skeleton placeholders announce loading instead of 
   expect(html).toContain("Loading your favorites and settings");
   expect(html).not.toContain("My favorites");
 });
+
+test("shows when and where each favorite was last served, when there's an earlier record", () => {
+  const html = renderToStaticMarkup(
+    <MeScreen
+      favorites={favorites}
+      favoritesLastServed={{
+        waffle: { date: "2026-11-01", mealPeriod: "Brunch", hallSlug: "top-of-lenoir", hallName: "Top of Lenoir" },
+      }}
+      theme="system"
+    />,
+  );
+
+  expect(html).toContain("Last served at Top of Lenoir, Sun Nov 1, Brunch");
+  expect(html.match(/Last served/g)).toHaveLength(1);
+});
