@@ -15,7 +15,9 @@ import { DEFAULT_PREFERENCES, type Preferences } from "./preferences";
  * `preferences` (the on-device settings, validated with `parsePreferences`)
  * filter what's returned. Both filters are strict cutoffs: an item missing any
  * filtered diet tag, or carrying any chosen allergen, is left out, as is a
- * station left with no items. Allergen filtering relies on UNC's labels only:
+ * station left with no items. The names of the items they hid are kept per
+ * meal period (`MealPeriod.hiddenByFilters`), so search can say how many
+ * matches the filters hid without a second query. Allergen filtering relies on UNC's labels only:
  * the UI must show `AllergenDisclaimer` alongside it. Favorites (matched by
  * normalized name) are flagged where they're served, listed together at the
  * top of each meal period (`MealPeriod.favorites`, with their station) and
@@ -64,6 +66,8 @@ export type FavoriteServing = { station: string; item: MenuItem };
 /**
  * `start`/`end` are local wall-clock times "HH:MM", or null if UNC's label had no readable hours.
  * `favorites`: the favorite items among `stations`, in page order, for the top of the hall's list.
+ * `hiddenByFilters`: the names of the items the diet and allergen filters left out, in page
+ * order (one per serving); absent when they left nothing out.
  */
 export type MealPeriod = {
   name: string;
@@ -71,6 +75,7 @@ export type MealPeriod = {
   end: string | null;
   favorites: FavoriteServing[];
   stations: Station[];
+  hiddenByFilters?: string[];
 };
 
 /** `menu_day.status`: whether UNC's page listed meal periods that day. */
@@ -161,6 +166,7 @@ type Row = {
   item_name: string | null;
   recipe_id: number | null;
   normalized_name: string | null;
+  passes_filters: boolean | null;
   dietary_tags: string[] | null;
   allergens: string[] | null;
   has_nutrition: boolean;
@@ -184,6 +190,8 @@ export async function getToday({
             mp.id as meal_period_id, mp.name as meal_period_name, mp.start_time, mp.end_time,
             s.name as station_name, s.excluded_from_combos as station_excluded_from_combos, mi.name as item_name, mi.recipe_id,
             mi.normalized_name, mi.dietary_tags, mi.allergens,
+            (mi.dietary_tags @> $2::text[] -- diet filters: every one required
+             and not (mi.allergens && $3::text[])) as passes_filters, -- allergens: none of the chosen ones allowed
             rn.recipe_id is not null as has_nutrition, rn.serving_size,
             rn.calories::float8 as calories, rn.protein_g::float8 as protein_g,
             rn.total_carbohydrate_g::float8 as carbs_g, rn.total_fat_g::float8 as fat_g
@@ -191,8 +199,6 @@ export async function getToday({
      left join menu_day md on md.location_id = l.id and md.date = $1
      left join meal_period mp on mp.menu_day_id = md.id
      left join menu_item mi on mi.meal_period_id = mp.id
-       and mi.dietary_tags @> $2::text[] -- diet filters: every one required
-       and not (mi.allergens && $3::text[]) -- allergens: none of the chosen ones allowed
      left join station s on s.id = mi.station_id
      left join recipe_nutrition rn on rn.recipe_id = mi.recipe_id
      order by l.id, mp.position, mi.position`,
@@ -223,6 +229,10 @@ export async function getToday({
       hall.mealPeriods.push(mealPeriod);
     }
     if (row.item_name === null) continue;
+    if (!row.passes_filters) {
+      (mealPeriod.hiddenByFilters ??= []).push(row.item_name);
+      continue;
+    }
 
     // Items are in page order, so a station's items are contiguous.
     let station = mealPeriod.stations.at(-1);
