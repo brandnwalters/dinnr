@@ -8,7 +8,7 @@ export function Bone({ className }: { className?: string }) {
 
 /**
  * Placeholders shown while preferences are read and today's menus load (Today,
- * Menus, Combos): a switcher bar and a few rows per hall column. Announced to
+ * Menus, Macros): a switcher bar and a few rows per hall column. Announced to
  * assistive tech as "Loading today's menus".
  */
 export function MenuSkeleton({ columns = 2 }: { columns?: number }) {

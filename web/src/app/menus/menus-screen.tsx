@@ -1,3 +1,4 @@
+import type { DishToLog } from "@/lib/meal-log";
 import { selectedMealPeriod } from "@/lib/meal-periods";
 import type { Hall, MenuItem } from "@/lib/today";
 import { HallColumns, HallSwitchers, type HallQuery } from "../hall-columns";
@@ -22,11 +23,14 @@ export function MenusScreen({
   halls,
   query,
   onToggleFavorite,
+  onLogDish,
   onClearFilters,
 }: {
   halls: readonly Hall[];
   query: HallQuery;
   onToggleFavorite?: (item: MenuItem) => void;
+  /** "I ate this" in a dish's nutrition sheet, tagged with the hall and meal period it's served at. */
+  onLogDish?: (dish: DishToLog) => void;
   /** Turn off the diet and allergen filters (offered when they hide a whole meal period). */
   onClearFilters?: () => void;
 }) {
@@ -47,6 +51,11 @@ export function MenusScreen({
                   mealPeriod={mealPeriod}
                   anchorHall={h.slug}
                   onToggleFavorite={onToggleFavorite}
+                  onLogDish={
+                    onLogDish &&
+                    ((item, servings) =>
+                      onLogDish({ item, servings, hall: { slug: h.slug, name: h.name }, mealPeriod: mealPeriod.name }))
+                  }
                   onClearFilters={onClearFilters}
                 />
               </>

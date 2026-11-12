@@ -10,9 +10,10 @@ function tabTag(html: string, label: string): string {
   return html.slice(0, end).match(/<a\b[^>]*>/g)?.at(-1) ?? "";
 }
 
-test("lists Today, Menus, Combos and Me", () => {
+test("lists Today, Menus, Macros and Me", () => {
   const html = renderToStaticMarkup(<AppNav pathname="/" />);
-  for (const label of ["Today", "Menus", "Combos", "Me"]) expect(html).toContain(`>${label}<`);
+  for (const label of ["Today", "Menus", "Macros", "Me"]) expect(html).toContain(`>${label}<`);
+  expect(html).not.toContain(">Combos<");
 });
 
 test("marks the current tab with aria-current, and only that tab", () => {
@@ -37,10 +38,10 @@ test("Menus links to /menus and is current there", () => {
   expect(html.match(/aria-current/g)).toHaveLength(1);
 });
 
-test("Combos links to /combos and is current there", () => {
-  const html = renderToStaticMarkup(<AppNav pathname="/combos" />);
-  expect(tabTag(html, "Combos")).toContain('href="/combos"');
-  expect(tabTag(html, "Combos")).toContain('aria-current="page"');
+test("Macros links to /macros and is current there", () => {
+  const html = renderToStaticMarkup(<AppNav pathname="/macros" />);
+  expect(tabTag(html, "Macros")).toContain('href="/macros"');
+  expect(tabTag(html, "Macros")).toContain('aria-current="page"');
   expect(html.match(/aria-current/g)).toHaveLength(1);
 });
 

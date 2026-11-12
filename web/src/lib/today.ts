@@ -30,7 +30,9 @@ import { emptyWeek, getUsualHours, type UsualHours } from "./usual-hours";
  * served it lately (`NEW_TODAY_WINDOW_DAYS`, `NEW_TODAY_MIN_HISTORY_DAYS`).
  */
 
-export const DINING_TIME_ZONE = "America/New_York";
+import { DINING_TIME_ZONE, diningDate } from "./dining-date";
+
+export { DINING_TIME_ZONE, diningDate };
 
 /** A dish is New today when its hall served nothing with its normalized name in this many days before today. */
 export const NEW_TODAY_WINDOW_DAYS = 14;
@@ -145,17 +147,6 @@ export type TodayOptions = {
   mealPeriod?: string;
   preferences?: Preferences;
 };
-
-/** The calendar date (YYYY-MM-DD) in Chapel Hill at `now`. */
-export function diningDate(now: Date): string {
-  // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: DINING_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
-}
 
 /** The wall-clock time ("HH:MM", 24-hour) in Chapel Hill at `now`. */
 export function diningTime(now: Date): string {

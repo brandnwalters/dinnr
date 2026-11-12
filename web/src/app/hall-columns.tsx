@@ -7,12 +7,12 @@ import { HallSwitcher } from "./hall-switcher";
 import { MealPeriodSwitcher } from "./meal-period-switcher";
 
 /**
- * The layout Menus and Combos share: the meal-period and hall switchers, and
+ * The layout Menus and Macros share: the meal-period and hall switchers, and
  * one column per hall (phones show only the selected hall; from ~1024px up
  * every hall gets a column and the hall switcher is hidden). Presentational.
  */
 
-/** The URL state of Menus and Combos: `?meal=` (meal-period name) and `?hall=` (hall slug). */
+/** The URL state of Menus and Macros: `?meal=` (meal-period name) and `?hall=` (hall slug). */
 export type HallQuery = { meal?: string; hall?: string };
 
 /** `?meal=` and `?hall=` read from the URL's search params (absent ones left out). */

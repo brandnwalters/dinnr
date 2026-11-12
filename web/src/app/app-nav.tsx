@@ -8,7 +8,7 @@ type Tab = { label: string; href: string; icon: LucideIcon };
 const TABS: readonly Tab[] = [
   { label: "Today", href: "/", icon: CalendarDays },
   { label: "Menus", href: "/menus", icon: UtensilsCrossed },
-  { label: "Combos", href: "/combos", icon: Layers },
+  { label: "Macros", href: "/macros", icon: Layers },
   { label: "Me", href: "/me", icon: User },
 ];
 
