@@ -90,18 +90,12 @@ function newId(now: Date): string {
   return `${now.getTime().toString(36)}-${lastId.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** The servings stepper's step, and the most one entry may hold. */
+/** The servings stepper's step, which is also the fewest servings one entry may hold. */
 export const SERVINGS_STEP = 0.5;
-export const MAX_SERVINGS_PER_ENTRY = 10;
 
-/** Whether `n` is a loggable servings amount: a multiple of ½ from ½ to `MAX_SERVINGS_PER_ENTRY`. */
+/** Whether `n` is a loggable servings amount: a multiple of ½, at least ½ (no upper limit). */
 export function isServings(n: unknown): n is number {
-  return (
-    typeof n === "number" &&
-    Number.isInteger(n / SERVINGS_STEP) &&
-    n >= SERVINGS_STEP &&
-    n <= MAX_SERVINGS_PER_ENTRY
-  );
+  return typeof n === "number" && Number.isInteger(n / SERVINGS_STEP) && n >= SERVINGS_STEP;
 }
 
 /** A dish's per-serving macros, or null unless its label gives all four. */

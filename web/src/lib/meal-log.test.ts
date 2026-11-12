@@ -223,9 +223,22 @@ test("a device where storage throws (private mode, quota) still logs for the ses
 
 test("servings are logged in ½ steps, at least ½", () => {
   expect(addEntry(EMPTY_MEAL_LOG, dish(CHICKEN, 0.5), EVENING).entries[0].servings).toBe(0.5);
-  for (const bad of [0, -1, 0.25, 1.3, Number.NaN]) {
+  for (const bad of [0, -1, 0.25, 1.3, Number.NaN, Number.POSITIVE_INFINITY]) {
     expect(addEntry(EMPTY_MEAL_LOG, dish(CHICKEN, bad), EVENING)).toEqual(EMPTY_MEAL_LOG);
   }
+});
+
+test("there's no upper limit on servings: large amounts log, change and survive a reload", () => {
+  const log = addEntry(EMPTY_MEAL_LOG, dish(CHICKEN, 12), EVENING);
+  expect(log.entries[0].servings).toBe(12);
+  expect(changeServings(log, log.entries[0].id, 20.5).entries[0].servings).toBe(20.5);
+
+  const stored = { version: 1, entries: [{ ...log.entries[0], servings: 15 }] };
+  const reloaded = createMealLogStore(
+    memoryStorage({ [MEAL_LOG_STORAGE_KEY]: JSON.stringify(stored) }),
+    () => EVENING,
+  ).get();
+  expect(reloaded.entries.map((e) => e.servings)).toEqual([15]);
 });
 
 test("logging a combo adds one entry per item at its combo servings, tagged with the hall and meal period", () => {
