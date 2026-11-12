@@ -132,7 +132,7 @@ Tests never touch the live site: they use pages saved once, by hand and politely
 
 Tests check external behavior through the highest available seam: inputs in, observable outputs
 out. They don't test internal helpers or call order, so refactoring the internals doesn't break them.
-There are three seams:
+There are four seams:
 
 1. **One scraper run** (pytest, [`scraper/tests/`](scraper/tests/)). A fake fetcher serves the
    saved fixture pages to a real scrape, and the test checks the contents of a real Postgres test
@@ -145,8 +145,21 @@ There are three seams:
    stations and the toggle, filters, ranking order, the 5-result cap, an empty result when nothing
    fits, and a worst-case timing budget.
 3. **The Today data layer** (vitest, `web/src/lib/today*.test.ts`). Seed a database with a known
-   menu, call the data layer with a fixed time and preferences, and check the current vs. next meal
-   period, favorites first, allergen and diet filtering, closed halls, and hours.
+   menu (several past days where history matters), call the data layer with a fixed time and
+   preferences, and check the current vs. next meal period, favorites first, allergen and diet
+   filtering, closed halls, hours, usual hours, when each dish and favorite was last served, and
+   New today.
+4. **The other pure, isomorphic modules** (vitest, `web/src/lib/*.test.ts`). Hand-built inputs, no
+   database; storage is an in-memory fake. Station grouping
+   ([`station-groups.test.ts`](web/src/lib/station-groups.test.ts)): main, bar or Extras, group
+   order, favorites-first previews and the Today card cap. Search
+   ([`dish-search.test.ts`](web/src/lib/dish-search.test.ts)): matching, grouping by hall and meal,
+   Extras included, the hidden-by-filters count. The meal log
+   ([`meal-log.test.ts`](web/src/lib/meal-log.test.ts)): add, change servings, delete, per-day
+   totals, pruning beyond 7 days, the dining-day boundary, and bad stored data falling back safely.
+   Remaining targets ([`remaining-targets.test.ts`](web/src/lib/remaining-targets.test.ts)): what's
+   left of today's targets, a reached max and the per-meal split, checked through `suggestCombos`.
+   Preferences, meal periods and the like are tested the same way.
 
 The UI gets light smoke tests on top of these.
 
