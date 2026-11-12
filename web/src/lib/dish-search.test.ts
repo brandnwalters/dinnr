@@ -33,7 +33,7 @@ const hall = (slug: string, name: string, mealPeriods: MealPeriod[]): Hall => ({
   mealPeriods,
 });
 
-const menu = (...halls: Hall[]): TodayMenu => ({ date: "2026-11-11", halls });
+const menu = (...halls: Hall[]): TodayMenu => ({ date: "2026-11-11", halls, favoritesLastServed: {} });
 
 /** Each result as "hall / meal / station / dish", in the order shown. */
 const lines = (search: ReturnType<typeof searchDishes>) =>

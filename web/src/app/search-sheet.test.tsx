@@ -15,6 +15,7 @@ const item = (name: string, recipeId: number): MenuItem => ({
 
 const today: TodayMenu = {
   date: "2026-11-11",
+  favoritesLastServed: {},
   halls: [
     {
       slug: "chase",
