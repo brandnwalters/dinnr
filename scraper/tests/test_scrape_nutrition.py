@@ -6,7 +6,7 @@ from decimal import Decimal
 from dinnr.locations import Location
 from dinnr.nutrition import recipe_url
 from dinnr.run import scrape
-from dinnr.testing import FakeFetcher
+from dinnr.testing import FakeFetcher, dated_page
 
 TODAY = date(2026, 11, 7)
 NOW = datetime(2026, 11, 7, 14, 0, tzinfo=UTC)
@@ -18,8 +18,8 @@ CHASE = Location("chase", "Chase", "https://dining.unc.edu/locations/chase/")
 RECIPE_FIXTURES = {recipe_url(rid): f"recipes/recipe-{rid}.json" for rid in (13708, 14169, 6650, 8039)}
 
 
-def chase_fetcher(**kwargs) -> FakeFetcher:
-    return FakeFetcher({CHASE.url: "chase.html", **RECIPE_FIXTURES}, **kwargs)
+def chase_fetcher(page: str = "chase.html", **kwargs) -> FakeFetcher:
+    return FakeFetcher({CHASE.url: page, **RECIPE_FIXTURES}, **kwargs)
 
 
 def nutrition(db, recipe_id: int) -> dict | None:
@@ -109,12 +109,12 @@ def test_every_recipe_on_the_menu_gets_nutrition_fetched_once(db, clean_db):
     assert db.execute("select count(*) from recipe_nutrition").fetchone() == (len(on_menu),)
 
 
-def test_later_runs_within_30_days_fetch_no_nutrition(db, clean_db):
+def test_later_runs_within_30_days_fetch_no_nutrition(db, clean_db, tmp_path):
     scrape(db, chase_fetcher(), [CHASE], now=NOW)
 
     same_day = chase_fetcher()
     scrape(db, same_day, [CHASE], now=NOW + timedelta(hours=6))
-    thirty_days_on = chase_fetcher()
+    thirty_days_on = chase_fetcher(dated_page("chase.html", TODAY + timedelta(days=30), tmp_path))
     scrape(db, thirty_days_on, [CHASE], now=NOW + timedelta(days=30))
 
     assert same_day.requested == [CHASE.url]
@@ -122,14 +122,14 @@ def test_later_runs_within_30_days_fetch_no_nutrition(db, clean_db):
     assert nutrition(db, 13708)["fetched_at"] == NOW
 
 
-def test_nutrition_older_than_30_days_is_fetched_again_and_replaced(db, clean_db):
+def test_nutrition_older_than_30_days_is_fetched_again_and_replaced(db, clean_db, tmp_path):
     # First run: every recipe, 13708 included, is served the pancake label.
     pancakes_everywhere = FakeFetcher({CHASE.url: "chase.html"}, recipe_fallback="recipes/recipe-14169.json")
     scrape(db, pancakes_everywhere, [CHASE], now=NOW)
     assert nutrition(db, 13708)["name"] == "Buttermilk Pancake"
 
     later = NOW + timedelta(days=31)
-    fetcher = chase_fetcher()
+    fetcher = chase_fetcher(dated_page("chase.html", TODAY + timedelta(days=31), tmp_path))
     scrape(db, fetcher, [CHASE], now=later)
 
     assert sorted(recipe_requests(fetcher)) == sorted(recipe_url(rid) for rid in recipe_ids_on_menu(db))
@@ -137,10 +137,10 @@ def test_nutrition_older_than_30_days_is_fetched_again_and_replaced(db, clean_db
     assert (chicken["name"], chicken["calories"], chicken["fetched_at"]) == ("Chicken Breast", 140, later)
 
 
-def test_a_second_hall_fetches_only_recipes_not_already_known(db, clean_db):
+def test_a_second_hall_fetches_only_recipes_not_already_known(db, clean_db, tmp_path):
     scrape(db, FakeFetcher({LENOIR.url: "top-of-lenoir.html"}), [LENOIR], now=NOW)
 
-    fetcher = chase_fetcher()
+    fetcher = chase_fetcher(dated_page("chase.html", TODAY + timedelta(days=1), tmp_path))
     scrape(db, fetcher, [CHASE], now=NOW + timedelta(days=1))
 
     lenoir, chase = recipe_ids_on_menu(db, "top-of-lenoir"), recipe_ids_on_menu(db, "chase")

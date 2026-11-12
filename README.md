@@ -72,7 +72,7 @@ fetcher does HTTP, and the parsers are pure functions:
 | `repository.py` | Writes to Postgres as upserts on natural keys, and prunes items that have left the page, so running twice on the same day updates rows instead of duplicating them. |
 | `health.py` | Fails a hall that isn't closed but has no items, or whose item count is under half its recent normal (the median of its open days in the previous 14 days). |
 | `archive.py` | Saves every fetched response gzipped, by location and run time, so past days can be re-parsed after a parser bug fix. |
-| `run.py` | Orchestration, per hall: fetch → parse → save the menu under the date its page shows (by evening UNC's page has rolled over to tomorrow) → fetch missing or stale nutrition → health checks. A failing hall doesn't stop the others; the run fails at the end, naming each hall and why. |
+| `run.py` | Orchestration, per hall: fetch → parse → save the menu under the date its page shows, which must be today or tomorrow (by evening UNC's page has rolled over to tomorrow) → fetch missing or stale nutrition → health checks. A failing hall doesn't stop the others; the run fails at the end, naming each hall and why. |
 | `cli.py` / `migrate.py` | The `dinnr-scrape` and `dinnr-migrate` entry points. |
 | `check_today.py` | The `dinnr-check-today` entry point: fails, naming each hall, if any hall has no menu day saved for today. Runs mid-morning in CI to catch a scrape that never ran. |
 

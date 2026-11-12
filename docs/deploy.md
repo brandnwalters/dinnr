@@ -84,7 +84,8 @@ page is empty, check the latest **scrape** run succeeded today. (Per-deployment 
 - Re-running the workflow the same day is safe: the scraper updates rows instead of duplicating them.
 - Each menu is saved under the date UNC's page shows, not the clock's date. By the evening UNC's
   page has rolled over to the next day, so a scrape run then saves tomorrow's menu under tomorrow and
-  leaves today's alone.
+  leaves today's alone. A page showing any other date (e.g. a stale one) fails that hall and saves
+  nothing for it.
 - To run migrations or the scraper against Neon from your machine:
   `cd scraper && uv run dinnr-migrate --database-url "$NEON_URL"` (same for `dinnr-scrape`). This
   hits the live UNC site through the polite fetcher; don't loop it.

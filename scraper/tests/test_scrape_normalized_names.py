@@ -1,12 +1,13 @@
 """Seam 1: normalized item names (how favorites match a dish across stations and halls)."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 from dinnr.locations import LOCATIONS
 from dinnr.run import scrape
 from dinnr.testing import FIXTURES_DIR, FakeFetcher
 
 TODAY = date(2026, 11, 7)
+NOW = datetime(2026, 11, 7, 19, 0, tzinfo=UTC)  # 2pm in Chapel Hill on TODAY
 LENOIR_URL = "https://dining.unc.edu/locations/top-of-lenoir/"
 CHASE_URL = "https://dining.unc.edu/locations/chase/"
 BOTH_HALLS = {LENOIR_URL: "top-of-lenoir.html", CHASE_URL: "chase.html"}
@@ -29,7 +30,7 @@ def normalized_names(db, slug):
 
 
 def test_a_run_saves_each_items_normalized_name(db, clean_db):
-    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS)
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, now=NOW)
 
     lenoir = normalized_names(db, "top-of-lenoir")
     assert lenoir["Waffle"] == "waffle"
@@ -47,7 +48,7 @@ def test_the_same_dish_with_different_casing_or_spacing_normalizes_the_same(db, 
     variant = tmp_path / "chase.html"
     variant.write_text(page.replace(waffle, ">\n   NASHVILLE  hot\tChicken   biscuit  </a>", 1))
 
-    scrape(db, FakeFetcher({**BOTH_HALLS, CHASE_URL: str(variant)}), LOCATIONS)
+    scrape(db, FakeFetcher({**BOTH_HALLS, CHASE_URL: str(variant)}), LOCATIONS, now=NOW)
 
     lenoir = normalized_names(db, "top-of-lenoir")
     chase = normalized_names(db, "chase")

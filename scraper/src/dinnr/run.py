@@ -2,7 +2,9 @@
 
 Per location: fetch the page -> parse -> save the menu under the date the page
 shows -> fetch and save nutrition for recipes that are new or stale -> health
-checks. A hall whose page can't be fetched or fails a check doesn't stop the
+checks. The page must show today or tomorrow in Chapel Hill (UNC's page rolls
+over to tomorrow in the evening); any other date, e.g. from a stale page, would
+overwrite that day's menu, so the hall is failed and nothing is saved. A hall whose page can't be fetched or fails a check doesn't stop the
 others: every hall is scraped, then the run raises `ScrapeFailed` listing each failing hall and why.
 
 Work is committed as it's done (each hall's menu, then its nutrition), so a
@@ -13,13 +15,13 @@ next run tries it again.
 
 import logging
 from collections.abc import Iterable
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import psycopg
 
 from dinnr.fetcher import FETCH_ERRORS, Fetcher
 from dinnr.health import RECENT_DAYS, menu_problems
-from dinnr.locations import Location
+from dinnr.locations import Location, dining_today
 from dinnr.menu_parser import Menu, MenuParseError, parse_menu
 from dinnr.nutrition import Nutrition, NutritionParseError, needs_fetch, parse_nutrition, recipe_url
 from dinnr.repository import (
@@ -49,10 +51,10 @@ def scrape(
     fetcher: Fetcher,
     locations: Iterable[Location],
     *,
-    now: datetime | None = None,
+    now: datetime,
 ) -> dict[str, date]:
-    """Scrape every location; returns the date each hall's menu was saved under, by hall name."""
-    now = now or datetime.now(UTC)
+    """Scrape every location at `now`; returns the date each hall's menu was saved under, by hall name."""
+    today = dining_today(now)
     problems = []
     saved: dict[str, date] = {}
     station_ids: dict[str, int] = {}  # the halls share most station names
@@ -66,6 +68,12 @@ def scrape(
             menu = parse_menu(html)
         except MenuParseError as e:
             problems.append(f"{location.name}: unexpected page structure ({e}); nothing saved")
+            continue
+        if menu.day not in (today, today + timedelta(days=1)):
+            problems.append(
+                f"{location.name}: page shows {menu.day}, but it's {today} in Chapel Hill"
+                " (expected today or tomorrow); nothing saved"
+            )
             continue
         menu_day_id = save_menu(conn, location, menu.day, menu, station_ids=station_ids)
         conn.commit()

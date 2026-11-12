@@ -3,11 +3,11 @@
 from dinnr.locations import LOCATIONS
 from dinnr.run import scrape
 from dinnr.testing import FakeFetcher
-from test_scrape_run import BOTH_HALLS
+from test_scrape_run import BOTH_HALLS, NOW
 
 
 def test_condiment_beverage_and_cereal_stations_are_flagged_as_excluded_from_combos(db, clean_db):
-    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS)
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, now=NOW)
 
     stations = dict(db.execute("select name, excluded_from_combos from station").fetchall())
     flagged = {name for name, excluded in stations.items() if excluded}

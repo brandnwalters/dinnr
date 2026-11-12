@@ -58,10 +58,10 @@ def page_file(tmp_path, name, html):
     return str(path)
 
 
-def scrape_lenoir(db, tmp_path, html):
-    """Scrape only Lenoir, serving it `html`."""
+def scrape_lenoir(db, tmp_path, html, *, now=NOW):
+    """Scrape only Lenoir at `now` (2pm on TODAY by default), serving it `html`."""
     fetcher = FakeFetcher({LENOIR_URL: page_file(tmp_path, "lenoir.html", html)})
-    scrape(db, fetcher, [LENOIR], now=NOW)
+    scrape(db, fetcher, [LENOIR], now=now)
 
 
 # TODAY is Saturday 2026-11-07.
@@ -143,7 +143,7 @@ def test_a_weekday_menu_is_compared_with_recent_weekdays_not_weekends(db, clean_
     with pytest.raises(
         ScrapeFailed, match=r"Top of Lenoir: 14 menu items, under half of the recent weekday normal \(41\)"
     ):
-        scrape_lenoir(db, tmp_path, menu_page(14, day=NEXT_MONDAY))
+        scrape_lenoir(db, tmp_path, menu_page(14, day=NEXT_MONDAY), now=NOW + timedelta(days=2))
 
 
 def test_a_first_weekend_after_only_weekdays_is_not_compared(db, clean_db, tmp_path):
@@ -210,5 +210,17 @@ def test_a_page_with_no_readable_date_fails_the_run(db, clean_db, tmp_path):
     # Without the page's own date there is no telling which day this menu is for.
     with pytest.raises(ScrapeFailed, match=r"Top of Lenoir: unexpected page structure \(no date"):
         scrape_lenoir(db, tmp_path, menu_page(5, day=None))
+
+    assert db.execute("select count(*) from menu_day").fetchone() == (0,)
+
+
+def test_a_page_showing_neither_today_nor_tomorrow_fails_the_run_and_saves_nothing(db, clean_db, tmp_path):
+    # E.g. a stale cached page: saving it would overwrite that day's menu.
+    with pytest.raises(
+        ScrapeFailed,
+        match=r"Top of Lenoir: page shows 2026-11-06, but it's 2026-11-07 in Chapel Hill "
+        r"\(expected today or tomorrow\); nothing saved",
+    ):
+        scrape_lenoir(db, tmp_path, menu_page(5, day=TODAY - timedelta(days=1)))
 
     assert db.execute("select count(*) from menu_day").fetchone() == (0,)
