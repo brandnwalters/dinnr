@@ -13,7 +13,7 @@ from dinnr.run import ScrapeFailed, scrape
 from dinnr.testing import FakeFetcher
 from test_scrape_health import LENOIR, NOW, menu_page, page_file
 from test_scrape_nutrition import CHASE, nutrition
-from test_scrape_run import CHASE_URL, LENOIR_URL, TODAY, hall_menu
+from test_scrape_run import CHASE_URL, LENOIR_URL, hall_menu
 
 # menu_page(n) lists recipes 900000 .. 900000 + n - 1.
 FIRST_RECIPE = 900000
@@ -63,7 +63,7 @@ def test_a_timeout_fetching_a_hall_page_is_reported_like_any_other_fetch_error(d
     fetcher = two_halls(tmp_path, failures={CHASE_URL: TimeoutError("timed out")})
 
     with pytest.raises(ScrapeFailed) as failed:
-        scrape(db, fetcher, [LENOIR, CHASE], today=TODAY, now=NOW)
+        scrape(db, fetcher, [LENOIR, CHASE], now=NOW)
 
     assert failed.value.problems == ["Chase: could not fetch the page (timed out); nothing saved"]
     assert len(hall_menu(db, "top-of-lenoir")) == 3
@@ -73,7 +73,7 @@ def test_a_recipe_that_cannot_be_fetched_is_skipped_and_retried_next_run(db, cle
     broken = recipe_url(FIRST_RECIPE + 1)
     first = two_halls(tmp_path, failures={broken: FetchError("HTTP 500")})
 
-    scrape(db, first, [LENOIR, CHASE], today=TODAY, now=NOW)
+    scrape(db, first, [LENOIR, CHASE], now=NOW)
 
     # The run carries on: the rest of Lenoir's recipes, and Chase, are saved.
     assert broken in first.requested
@@ -81,7 +81,7 @@ def test_a_recipe_that_cannot_be_fetched_is_skipped_and_retried_next_run(db, cle
     assert len(hall_menu(db, "chase")) == 4
 
     retry = two_halls(tmp_path)
-    scrape(db, retry, [LENOIR, CHASE], today=TODAY, now=NOW)
+    scrape(db, retry, [LENOIR, CHASE], now=NOW)
 
     assert [url for url in retry.requested if "recipe.php" in url] == [broken]
     assert nutrition(db, FIRST_RECIPE + 1)["name"] == "Chicken Breast"
@@ -113,7 +113,7 @@ def test_a_hall_with_unfetchable_recipes_is_still_healthy(db, clean_db, tmp_path
     # Nutrition is best effort: it never fails the run.
     failures = {recipe_url(FIRST_RECIPE + n): FetchError("HTTP 500") for n in range(3)}
 
-    scrape(db, two_halls(tmp_path, failures=failures), [LENOIR], today=TODAY, now=NOW)
+    scrape(db, two_halls(tmp_path, failures=failures), [LENOIR], now=NOW)
 
     assert len(hall_menu(db, "top-of-lenoir")) == 3
     assert saved_recipes(db) == set()

@@ -1,8 +1,9 @@
 """Command-line entry point for the scraper (`dinnr-scrape`).
 
-Scrapes every configured location's page for today (America/New_York) into
-Postgres, through the polite fetcher. Every fetched page is also saved gzipped
-under the archive folder (see `dinnr.archive`). Exits 1, naming each failing
+Scrapes every configured location's page into Postgres, through the polite
+fetcher. Each hall's menu is saved under the date its page shows, which after
+UNC's evening rollover is tomorrow, not the clock's date. Every fetched page is
+also saved gzipped under the archive folder (see `dinnr.archive`). Exits 1, naming each failing
 hall and why, if any hall's page fails a health check (see `dinnr.health`).
 """
 
@@ -16,7 +17,7 @@ import psycopg
 
 from dinnr.archive import ArchivingFetcher
 from dinnr.fetcher import Fetcher, PoliteFetcher
-from dinnr.locations import LOCATIONS, dining_today
+from dinnr.locations import LOCATIONS
 from dinnr.migrate import add_database_url_argument
 from dinnr.run import ScrapeFailed, scrape
 
@@ -33,15 +34,15 @@ def main(argv: list[str] | None = None, *, fetcher: Fetcher | None = None, now: 
     args = parser.parse_args(argv)
 
     now = now or datetime.now(UTC)
-    today = dining_today(now)
     archiving = ArchivingFetcher(fetcher or PoliteFetcher(), args.archive_dir, run_at=now, locations=LOCATIONS)
     with psycopg.connect(args.database_url) as conn:
         try:
-            scrape(conn, archiving, LOCATIONS, today=today, now=now)
+            saved = scrape(conn, archiving, LOCATIONS, now=now)
         except ScrapeFailed as e:
             print(f"dinnr-scrape: {e}", file=sys.stderr)
             return 1
-    print(f"dinnr-scrape: saved {len(LOCATIONS)} location(s) for {today}")
+    days = ", ".join(str(day) for day in sorted(set(saved.values())))
+    print(f"dinnr-scrape: saved {len(saved)} location(s) for {days}")
     return 0
 
 

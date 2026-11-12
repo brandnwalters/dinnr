@@ -23,6 +23,16 @@ robots.txt was checked first (it disallows `/*?date=*` and `/*?pg=*`); no
 `recipe.php` returns JSON `{"success": ..., "html": "<nutrition label fragment>"}`.
 The site's own JS also adds `&hide_allergens=0`; we requested only `?recipe=<id>`.
 
+## Rollover capture
+
+`rollover-top-of-lenoir.html` is the Lenoir page fetched by the first production scrape (GitHub
+Actions run 42540582340, archived as `raw-pages-42540582340-1/20261109T003059Z/top-of-lenoir.html.gz`),
+started by hand at about **7:30 pm EST on Sunday 2026-11-08**. UNC's default page had already rolled
+over to the next day: the date-picker button reads `2026-11-09` (on a same-day page it reads `Today`)
+and `#date-timestamp` is `1794200400`, midnight 2026-11-09 in Chapel Hill. It is a weekday page:
+Breakfast (7am-11am), Lunch (11am-3pm), Late Lunch (3pm-5pm), Dinner (5pm-8:30pm). It is the page
+text as the archive saved it, ungzipped (see issue #19).
+
 ## Hand-crafted pages
 
 The capture day was a Saturday, and other days can only be reached through

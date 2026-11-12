@@ -1,23 +1,29 @@
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from dinnr import cli as scrape_cli
 from dinnr.check_today import main
-from dinnr.testing import FakeFetcher
+from dinnr.testing import FakeFetcher, dated_page
 
 LENOIR_URL = "https://dining.unc.edu/locations/top-of-lenoir/"
 CHASE_URL = "https://dining.unc.edu/locations/chase/"
 
 
-def scrape_at(now: datetime, database_url: str, tmp_path) -> None:
-    fetcher = FakeFetcher({LENOIR_URL: "top-of-lenoir.html", CHASE_URL: "chase.html"})
+def scrape_at(now: datetime, database_url: str, tmp_path, *, page_day: date) -> None:
+    """Run the scraper at `now`, serving both halls' pages showing `page_day`."""
+    fetcher = FakeFetcher(
+        {
+            LENOIR_URL: dated_page("top-of-lenoir.html", page_day, tmp_path),
+            CHASE_URL: dated_page("chase.html", page_day, tmp_path),
+        }
+    )
     exit_code = scrape_cli.main(["--database-url", database_url, "--archive-dir", str(tmp_path)], fetcher=fetcher, now=now)
     assert exit_code == 0
 
 
 def test_passes_when_every_hall_has_todays_menu(clean_db, migrated_database_url, tmp_path):
     # 09:30 UTC scrape, 14:00 UTC check: both Nov 10 in Chapel Hill.
-    scrape_at(datetime(2026, 11, 10, 9, 30, tzinfo=UTC), migrated_database_url, tmp_path)
+    scrape_at(datetime(2026, 11, 10, 9, 30, tzinfo=UTC), migrated_database_url, tmp_path, page_day=date(2026, 11, 10))
 
     exit_code = main(["--database-url", migrated_database_url], now=datetime(2026, 11, 10, 14, 0, tzinfo=UTC))
 
@@ -35,8 +41,8 @@ def test_fails_naming_each_hall_with_no_menu_for_today(clean_db, migrated_databa
 
 
 def test_yesterdays_menu_does_not_count_for_today(clean_db, migrated_database_url, tmp_path):
-    # 03:00 UTC on Nov 10 is still Nov 9 in Chapel Hill: the last scrape saved Nov 9.
-    scrape_at(datetime(2026, 11, 10, 3, 0, tzinfo=UTC), migrated_database_url, tmp_path)
+    # 03:00 UTC on Nov 10 is still Nov 9 in Chapel Hill: the last scrape saved Nov 9's pages.
+    scrape_at(datetime(2026, 11, 10, 3, 0, tzinfo=UTC), migrated_database_url, tmp_path, page_day=date(2026, 11, 9))
 
     exit_code = main(["--database-url", migrated_database_url], now=datetime(2026, 11, 10, 14, 0, tzinfo=UTC))
 

@@ -29,7 +29,7 @@ def normalized_names(db, slug):
 
 
 def test_a_run_saves_each_items_normalized_name(db, clean_db):
-    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS, today=TODAY)
+    scrape(db, FakeFetcher(BOTH_HALLS), LOCATIONS)
 
     lenoir = normalized_names(db, "top-of-lenoir")
     assert lenoir["Waffle"] == "waffle"
@@ -47,7 +47,7 @@ def test_the_same_dish_with_different_casing_or_spacing_normalizes_the_same(db, 
     variant = tmp_path / "chase.html"
     variant.write_text(page.replace(waffle, ">\n   NASHVILLE  hot\tChicken   biscuit  </a>", 1))
 
-    scrape(db, FakeFetcher({**BOTH_HALLS, CHASE_URL: str(variant)}), LOCATIONS, today=TODAY)
+    scrape(db, FakeFetcher({**BOTH_HALLS, CHASE_URL: str(variant)}), LOCATIONS)
 
     lenoir = normalized_names(db, "top-of-lenoir")
     chase = normalized_names(db, "chase")

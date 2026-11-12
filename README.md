@@ -66,13 +66,13 @@ fetcher does HTTP, and the parsers are pure functions:
 | --- | --- |
 | `locations.py` | Config: the halls to visit. Adding a hall is one entry, since every location page has the same structure. |
 | `fetcher.py` | The only component that does HTTP. Polite by construction (see below). Passed to the rest of the scraper as a dependency, so tests can swap in a fake. |
-| `menu_parser.py` | HTML → meal periods (with hours), stations and items (recipe ID, allergens, dietary tags, normalized name). A page with no meal periods is a closed day; a page in an unexpected shape raises. |
+| `menu_parser.py` | HTML → the page's date (from its date picker), meal periods (with hours), stations and items (recipe ID, allergens, dietary tags, normalized name). A page with no meal periods is a closed day; a page with no readable date, or in an unexpected shape, raises. |
 | `nutrition.py` | `recipe.php` response → structured nutrition label and ingredients, plus the cache policy: fetch only recipes never seen or fetched more than 30 days ago. |
 | `stations.py` | Flags condiment-type stations (Condiments and Spreads, Beverages, Cereal) to leave out of combos. |
 | `repository.py` | Writes to Postgres as upserts on natural keys, and prunes items that have left the page, so running twice on the same day updates rows instead of duplicating them. |
 | `health.py` | Fails a hall that isn't closed but has no items, or whose item count is under half its recent normal (the median of its open days in the previous 14 days). |
 | `archive.py` | Saves every fetched response gzipped, by location and run time, so past days can be re-parsed after a parser bug fix. |
-| `run.py` | Orchestration, per hall: fetch → parse → save the menu → fetch missing or stale nutrition → health checks. A failing hall doesn't stop the others; the run fails at the end, naming each hall and why. |
+| `run.py` | Orchestration, per hall: fetch → parse → save the menu under the date its page shows (by evening UNC's page has rolled over to tomorrow) → fetch missing or stale nutrition → health checks. A failing hall doesn't stop the others; the run fails at the end, naming each hall and why. |
 | `cli.py` / `migrate.py` | The `dinnr-scrape` and `dinnr-migrate` entry points. |
 | `check_today.py` | The `dinnr-check-today` entry point: fails, naming each hall, if any hall has no menu day saved for today. Runs mid-morning in CI to catch a scrape that never ran. |
 
@@ -159,7 +159,7 @@ docker compose up -d --wait          # Postgres 17 on localhost:5432 (user/passw
 
 cd scraper
 uv run dinnr-migrate                 # create the schema
-uv run dinnr-scrape                  # scrape today's menus from the LIVE UNC site (politely)
+uv run dinnr-scrape                  # scrape the current menus from the LIVE UNC site (politely)
 
 cd ../web
 pnpm install

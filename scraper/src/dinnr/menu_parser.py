@@ -6,15 +6,24 @@ Page structure (see fixtures/unc/README.md): meal periods are the tabs of
 text. Items are `li.menu-item-li` entries holding `<a data-recipe="ID">Name</a>`; dietary tags
 are the link's `prop-<code>` classes and allergens its `allergen-has_<code>` classes.
 
+The page's date is the `#date-timestamp` hidden input of the date picker
+(`#location-date-calendar-picker`): a Unix timestamp of that day's midnight in
+Chapel Hill. It isn't always the clock's date: by the evening UNC's default page
+has rolled over to the next day. (The picker's button shows "Today" or, after
+the rollover, the date itself, so it can't be read on its own.)
+
 A location page (it has `#single-location-wrap`) with no `#menu-tabs` is a
-closed day. Anything else that isn't in this shape raises `MenuParseError`.
+closed day. Anything else that isn't in this shape, including a page with no
+readable date, raises `MenuParseError`.
 """
 
 import re
 from dataclasses import dataclass, field
-from datetime import time
+from datetime import date, datetime, time
 
 from bs4 import BeautifulSoup, Tag
+
+from dinnr.locations import DINING_TZ
 
 
 class MenuParseError(ValueError):
@@ -54,6 +63,7 @@ class MealPeriod:
 
 @dataclass(frozen=True)
 class Menu:
+    day: date  # the date the page shows, which may not be the clock's (see module docstring)
     meal_periods: list[MealPeriod] = field(default_factory=list)
 
     @property
@@ -110,9 +120,10 @@ def parse_menu(html: str) -> Menu:
     soup = BeautifulSoup(html, "html.parser")
     if soup.find(id=LOCATION_PAGE_ID) is None:
         raise MenuParseError(f"not a location page (no #{LOCATION_PAGE_ID})")
+    day = _page_day(soup)
     tabs_root = soup.find(id="menu-tabs")
     if tabs_root is None:
-        return Menu()
+        return Menu(day)
 
     meal_periods = []
     for tab in tabs_root.select('[role="tab"]'):
@@ -122,7 +133,15 @@ def parse_menu(html: str) -> Menu:
         label = _text(tab)
         start, end = _hours_from_label(label)
         meal_periods.append(MealPeriod(_name_from_label(label), label, _parse_stations(panel), start, end))
-    return Menu(meal_periods)
+    return Menu(day, meal_periods)
+
+
+def _page_day(soup: BeautifulSoup) -> date:
+    stamp = soup.select_one("#location-date-calendar-picker #date-timestamp")
+    value = stamp.get("value") if stamp is not None else None
+    if not isinstance(value, str) or not value.isdigit():
+        raise MenuParseError(f"no date: no readable #date-timestamp in the date picker (found {value!r})")
+    return datetime.fromtimestamp(int(value), DINING_TZ).date()
 
 
 def _parse_stations(panel: Tag) -> list[Station]:

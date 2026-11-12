@@ -1,28 +1,42 @@
 """Seam 1: health checks. A run whose pages look wrong fails, saying which hall and why.
 
-These use small hand-made pages in the real page's shape (see menu_parser) and
+These use small hand-made pages in the real page's shape (see menu_parser), each
+showing TODAY in its date picker unless a test says otherwise, and
 seed past days straight into the database, so they don't need full fixture runs.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
 from dinnr.cli import main
 from dinnr.locations import LOCATIONS
 from dinnr.run import ScrapeFailed, scrape
-from dinnr.testing import FakeFetcher
+from dinnr.testing import FakeFetcher, page_timestamp
 from test_scrape_run import CHASE_URL, LENOIR_URL, TODAY, hall_day, hall_menu
 
 NOW = datetime(2026, 11, 7, 19, 0, tzinfo=UTC)  # 2pm in Chapel Hill on TODAY
 LENOIR = next(loc for loc in LOCATIONS if loc.slug == "top-of-lenoir")
 
 
-def location_page(menu_tabs=""):
-    return f'<html><body><div id="single-location-wrap"><h1>Top of Lenoir</h1>{menu_tabs}</div></body></html>'
+def date_picker(day: date) -> str:
+    """The page's date picker, as on the real page: its timestamp is `day`'s midnight in Chapel Hill."""
+    return (
+        '<div id="location-date-calendar-picker" style="display: none;">'
+        f'<input type="hidden" value="{page_timestamp(day)}" id="date-timestamp"></div>'
+    )
 
 
-def menu_page(item_count, *, panel_id="tabinfo-1"):
+def location_page(menu_tabs="", *, day=TODAY):
+    """A location page showing `day` in its date picker; no date picker at all if `day` is None."""
+    picker = date_picker(day) if day else ""
+    return (
+        f'<html><body><div id="single-location-wrap"><h1>Top of Lenoir</h1>{picker}{menu_tabs}</div>'
+        "</body></html>"
+    )
+
+
+def menu_page(item_count, *, panel_id="tabinfo-1", day=TODAY):
     """A location page with one meal period (Lunch) and one station holding `item_count` items."""
     items = "".join(
         f'<li class="menu-item-li"><a class="show-nutrition" data-recipe="{900000 + n}">Dish {n}</a></li>'
@@ -33,7 +47,8 @@ def menu_page(item_count, *, panel_id="tabinfo-1"):
         '<button role="tab" aria-controls="tabinfo-1">Lunch (11am-3pm)</button>'
         f'<div role="tabpanel" id="{panel_id}"><div class="menu-station">'
         f'<button class="toggle-menu-station-data">The Grill</button><ul>{items}</ul>'
-        "</div></div></div>"
+        "</div></div></div>",
+        day=day,
     )
 
 
@@ -43,10 +58,10 @@ def page_file(tmp_path, name, html):
     return str(path)
 
 
-def scrape_lenoir(db, tmp_path, html, *, today=TODAY):
-    """Scrape only Lenoir on `today` (a Saturday by default), serving it `html`."""
+def scrape_lenoir(db, tmp_path, html):
+    """Scrape only Lenoir, serving it `html`."""
     fetcher = FakeFetcher({LENOIR_URL: page_file(tmp_path, "lenoir.html", html)})
-    scrape(db, fetcher, [LENOIR], today=today, now=NOW)
+    scrape(db, fetcher, [LENOIR], now=NOW)
 
 
 # TODAY is Saturday 2026-11-07.
@@ -128,7 +143,7 @@ def test_a_weekday_menu_is_compared_with_recent_weekdays_not_weekends(db, clean_
     with pytest.raises(
         ScrapeFailed, match=r"Top of Lenoir: 14 menu items, under half of the recent weekday normal \(41\)"
     ):
-        scrape_lenoir(db, tmp_path, menu_page(14), today=NEXT_MONDAY)
+        scrape_lenoir(db, tmp_path, menu_page(14, day=NEXT_MONDAY))
 
 
 def test_a_first_weekend_after_only_weekdays_is_not_compared(db, clean_db, tmp_path):
@@ -142,7 +157,7 @@ def test_a_first_weekend_after_only_weekdays_is_not_compared(db, clean_db, tmp_p
 
 def test_a_closed_day_does_not_fail_the_run(db, clean_db):
     # The real Lenoir page with its meal tabs removed (fixtures/unc/README.md).
-    scrape(db, FakeFetcher({LENOIR_URL: "closed-top-of-lenoir.html"}), [LENOIR], today=TODAY, now=NOW)
+    scrape(db, FakeFetcher({LENOIR_URL: "closed-top-of-lenoir.html"}), [LENOIR], now=NOW)
 
     assert hall_day(db, "top-of-lenoir") == ("closed", [])
 
@@ -189,3 +204,11 @@ def test_a_failing_hall_does_not_stop_a_healthy_one_being_saved_and_the_run_exit
     err = capsys.readouterr().err
     assert "Top of Lenoir: unexpected page structure" in err
     assert "Chase" not in err
+
+
+def test_a_page_with_no_readable_date_fails_the_run(db, clean_db, tmp_path):
+    # Without the page's own date there is no telling which day this menu is for.
+    with pytest.raises(ScrapeFailed, match=r"Top of Lenoir: unexpected page structure \(no date"):
+        scrape_lenoir(db, tmp_path, menu_page(5, day=None))
+
+    assert db.execute("select count(*) from menu_day").fetchone() == (0,)
