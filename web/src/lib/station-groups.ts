@@ -58,3 +58,31 @@ export function stationPreview(
   const shown = ordered.slice(0, limit);
   return { shown, rest: station.items.filter((i) => !shown.includes(i)) };
 }
+
+/**
+ * One line of a Today card's preview: a main station with its first few
+ * dishes (in page order) and how many `more` it has, or a bar summed up as
+ * its `count` of dishes.
+ */
+export type TodayPreviewLine =
+  | { kind: "station"; station: Station; shown: MenuItem[]; more: number }
+  | { kind: "bar"; station: Station; count: number };
+
+/** How many lines a Today card's preview shows at most. */
+export const TODAY_PREVIEW_LINES = 5;
+
+/**
+ * A Today card's condensed preview of a meal period's `stations`: main
+ * stations first, then bars as one-line summaries, capped at
+ * `TODAY_PREVIEW_LINES` lines; Extras are left off.
+ */
+export function todayPreview(stations: readonly Station[]): TodayPreviewLine[] {
+  const { main, bars } = groupStations(stations);
+  return [
+    ...main.map((station): TodayPreviewLine => {
+      const { shown, rest } = stationPreview(station, { favoritesFirst: false });
+      return { kind: "station", station, shown, more: rest.length };
+    }),
+    ...bars.map((station): TodayPreviewLine => ({ kind: "bar", station, count: station.items.length })),
+  ].slice(0, TODAY_PREVIEW_LINES);
+}

@@ -1,4 +1,4 @@
-// UI smoke tests: Today's head-to-head hall cards (status pill, hours, favorites, condensed preview, deep links).
+// UI smoke tests: Today's head-to-head hall cards (status pill, hours, favorites, trimmed preview, deep links) and the favorites strip.
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import type { Hall, HallStatus, MealPeriod, MenuItem } from "@/lib/today";
@@ -140,6 +140,89 @@ test("each card previews one line per station: its first dishes and how many mor
   const short = lenoirCard.slice(lenoirCard.lastIndexOf(">Simply Prepared &amp; Grill<"));
   expect(short).toMatch(/Grilled Chicken Breast, Rice/);
   expect(short).not.toContain("more");
+});
+
+test("a card's preview leaves Extras off and sums up each bar in one line that deep-links to it", () => {
+  const brunch = lenoir.mealPeriods[0];
+  const withExtras: Hall = {
+    ...lenoir,
+    mealPeriods: [
+      {
+        ...brunch,
+        stations: [
+          { name: "Beverages", excludedFromCombos: true, items: [item("Whole Milk", 20)] },
+          { name: "Waffle Bar", items: [item("Belgian Waffle", 21), item("Maple Syrup", 22), item("Whipped Cream", 23)] },
+          ...brunch.stations,
+        ],
+      },
+    ],
+  };
+  const lenoirCard = card(render([withExtras]), "Top of Lenoir");
+  expect(lenoirCard).not.toContain("Beverages");
+  expect(lenoirCard).not.toContain("Whole Milk");
+  expect(lenoirCard).toMatch(/Simply Prepared &amp; Grill.*Waffle Bar.*· 3 items/);
+  expect(lenoirCard).not.toContain("Belgian Waffle");
+  expect(linkTag(lenoirCard, "Waffle Bar")).toContain(
+    'href="/menus?hall=top-of-lenoir&amp;meal=Brunch#station-top-of-lenoir-waffle-bar"',
+  );
+});
+
+test("a card's preview stops at five stations, then See full menu", () => {
+  const many = ["Grill", "Pasta", "Wok", "Pizza", "Deli", "Soup"].map((name, i) => ({
+    name,
+    items: [item(`${name} Special`, 30 + i)],
+  }));
+  const busy: Hall = { ...chase, mealPeriods: [meal("Late Lunch", "14:00", "16:30", many)] };
+  const chaseCard = card(render([busy]), "Chase");
+  expect(chaseCard).toContain("Deli Special");
+  expect(chaseCard).not.toContain("Soup");
+  expect(chaseCard.indexOf("Deli Special")).toBeLessThan(chaseCard.indexOf("See full menu"));
+});
+
+/** The favorites strip's text, or "" when it's hidden. */
+function strip(html: string): string {
+  const start = html.indexOf('aria-label="Favorites by hall"');
+  if (start === -1) return "";
+  return html.slice(html.indexOf(">", start) + 1, html.indexOf("</p>", start)).replace(/<[^>]*>/g, "");
+}
+
+test("a strip above the cards compares how many favorites each hall serves in the selected meal, most first", () => {
+  const html = render();
+  expect(strip(html)).toBe("Top of Lenoir has 1 of your favorites · Chase has 0");
+  expect(html.indexOf('aria-label="Favorites by hall"')).toBeLessThan(html.indexOf(">Top of Lenoir</h2>"));
+
+  const chaseFavorites: Hall = {
+    ...chase,
+    mealPeriods: [
+      meal("Late Lunch", "14:00", "16:30", [
+        { name: "Deli", items: [item("Turkey Club", 9, true), item("BLT", 11, true)] },
+        { name: "Grill", items: [item("Turkey Club", 12, true), item("Fries", 13, true)] },
+      ]),
+      ...chase.mealPeriods.slice(1),
+    ],
+  };
+  // Chase serves Late Lunch, Lenoir doesn't: 3 distinct favorites (Turkey Club twice) against 0.
+  expect(strip(render([lenoir, chaseFavorites], { meal: "Late Lunch" }))).toBe(
+    "Chase has 3 of your favorites · Top of Lenoir has 0",
+  );
+});
+
+test("the favorites strip follows the meal period and is hidden when neither hall serves a favorite", () => {
+  expect(strip(render([lenoir, chase], { meal: "Dinner" }))).toBe("");
+  expect(strip(render([lenoir, chase], { meal: "Brunch" }))).not.toBe("");
+  // Filters come in already applied to the menu: with the favorite filtered out, the strip goes too.
+  const filtered: Hall = {
+    ...lenoir,
+    mealPeriods: lenoir.mealPeriods.map((mp) =>
+      meal(
+        mp.name,
+        mp.start!,
+        mp.end!,
+        mp.stations.map((s) => ({ ...s, items: s.items.filter((i) => !i.favorite) })),
+      ),
+    ),
+  };
+  expect(strip(render([filtered, chase]))).toBe("");
 });
 
 test("each station deep-links into Menus at that station, for that hall and meal period", () => {
