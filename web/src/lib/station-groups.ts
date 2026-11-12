@@ -74,9 +74,12 @@ export const TODAY_PREVIEW_LINES = 5;
 /**
  * A Today card's condensed preview of a meal period's `stations`: main
  * stations first, then bars as one-line summaries, capped at
- * `TODAY_PREVIEW_LINES` lines; Extras are left off.
+ * `lines` lines (default `TODAY_PREVIEW_LINES`); Extras are left off.
  */
-export function todayPreview(stations: readonly Station[]): TodayPreviewLine[] {
+export function todayPreview(
+  stations: readonly Station[],
+  { lines = TODAY_PREVIEW_LINES }: { lines?: number } = {},
+): TodayPreviewLine[] {
   const { main, bars } = groupStations(stations);
   return [
     ...main.map((station): TodayPreviewLine => {
@@ -84,5 +87,25 @@ export function todayPreview(stations: readonly Station[]): TodayPreviewLine[] {
       return { kind: "station", station, shown, more: rest.length };
     }),
     ...bars.map((station): TodayPreviewLine => ({ kind: "bar", station, count: station.items.length })),
-  ].slice(0, TODAY_PREVIEW_LINES);
+  ].slice(0, lines);
+}
+
+/** A New today dish as served at one station. */
+export type NewTodayServing = { station: string; item: MenuItem };
+
+/**
+ * The New today dishes among `stations` (any kind), in page order, each
+ * listed once (at its first station) when it's served at more than one.
+ */
+export function newTodayDishes(stations: readonly Station[]): NewTodayServing[] {
+  const seen = new Set<string>();
+  const dishes: NewTodayServing[] = [];
+  for (const station of stations) {
+    for (const item of station.items) {
+      if (!item.newToday || seen.has(item.normalizedName)) continue;
+      seen.add(item.normalizedName);
+      dishes.push({ station: station.name, item });
+    }
+  }
+  return dishes;
 }

@@ -130,3 +130,15 @@ test("with no favorites there's no favorites group", () => {
 
   expect(html).not.toContain("Your favorites");
 });
+
+test("a New today dish gets a visible tag on its row; other dishes don't", () => {
+  const html = renderGrill([
+    { name: "Jerk Chicken", recipeId: 2001, dietaryTags: [], newToday: true },
+    { name: "Rice", recipeId: 2002, dietaryTags: [] },
+  ]);
+
+  // Plain text, so screen readers read it out with the dish's row.
+  expect(row(html, 2001)).toMatch(/>New today</);
+  expect(row(html, 2001)).not.toMatch(/aria-hidden[^>]*>New today/);
+  expect(row(html, 2002)).not.toContain("New today");
+});

@@ -1,9 +1,9 @@
-import { Star } from "lucide-react";
+import { Sparkles, Star } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { menusHref } from "@/lib/menus-link";
-import { todayPreview } from "@/lib/station-groups";
+import { newTodayDishes, PREVIEW_DISHES, TODAY_PREVIEW_LINES, todayPreview, type NewTodayServing } from "@/lib/station-groups";
 import type { Hall, MealPeriod } from "@/lib/today";
 import { HallMenuHeader, itemCount, MealPeriodHeading, StatusPill } from "./hall-menu";
 import { NotServing } from "./meal-period-switcher";
@@ -43,13 +43,41 @@ function Favorites({ mealPeriod, hasFavorites }: { mealPeriod: MealPeriod; hasFa
 }
 
 /**
+ * "New today": the meal period's dishes this hall hasn't served lately (after
+ * filters), each with its station: the first few, then "+N more". Counted as
+ * one line of the card's preview; nothing when there are none.
+ */
+function NewToday({ hall, dishes }: { hall: Hall; dishes: NewTodayServing[] }) {
+  if (dishes.length === 0) return null;
+  const shown = dishes.slice(0, PREVIEW_DISHES);
+  const more = dishes.length - shown.length;
+  return (
+    <section className="flex flex-wrap items-baseline gap-x-2 text-sm">
+      <h4 className="flex items-center gap-1.5 font-semibold">
+        <Sparkles aria-hidden className="size-4 text-brand" />
+        New today
+      </h4>
+      <ul aria-label={`New today at ${hall.name}`} className="contents">
+        {shown.map(({ station, item }, i) => (
+          <li key={item.normalizedName}>
+            {item.name} <span className="text-muted-foreground">· {station}</span>
+            {i < shown.length - 1 && <span aria-hidden>,</span>}
+          </li>
+        ))}
+        {more > 0 && <li className="text-muted-foreground">+{more} more</li>}
+      </ul>
+    </section>
+  );
+}
+
+/**
  * The condensed menu (`todayPreview`): up to about five lines, one per main
  * station with its name in bold, its first few dishes in page order and "+N
  * more", then each bar as "<Station> · N items"; Extras are left off. Each line
  * opens Menus at that station for this hall and meal period.
  */
-function StationPreviews({ hall, mealPeriod }: { hall: Hall; mealPeriod: MealPeriod }) {
-  const lines = todayPreview(mealPeriod.stations);
+function StationPreviews({ hall, mealPeriod, lines: maxLines }: { hall: Hall; mealPeriod: MealPeriod; lines: number }) {
+  const lines = todayPreview(mealPeriod.stations, { lines: maxLines });
   if (lines.length === 0) return null;
   return (
     <ul aria-label={`${hall.name} stations`} className="flex flex-col">
@@ -80,7 +108,8 @@ function StationPreviews({ hall, mealPeriod }: { hall: Hall; mealPeriod: MealPer
 /**
  * One hall's card on Today for the meal period `meal` (from the shared
  * switcher): its name and status pill, then that meal period's hours, the
- * user's favorites served there, a condensed menu preview and a "See full
+ * user's favorites served there, its New today dishes, a condensed menu
+ * preview (sharing the five-line cap with New today) and a "See full
  * menu" link into Menus. A hall that is closed all day, has no menu yet,
  * doesn't serve `meal` ("Not serving <meal>") or whose dishes the filters all
  * hide says so instead.
@@ -139,6 +168,7 @@ function HallCardBody({
   if (allDay) return allDay;
   const mealPeriod = hall.mealPeriods.find((mp) => mp.name === meal);
   if (!mealPeriod) return meal && <NotServing mealPeriod={meal} />;
+  const newToday = newTodayDishes(mealPeriod.stations);
   return (
     <>
       <MealPeriodHeading mealPeriod={mealPeriod} renderLabel={(label) => <UsualHoursButton>{label}</UsualHoursButton>} />
@@ -147,7 +177,12 @@ function HallCardBody({
       ) : (
         <>
           <Favorites mealPeriod={mealPeriod} hasFavorites={hasFavorites} />
-          <StationPreviews hall={hall} mealPeriod={mealPeriod} />
+          <NewToday hall={hall} dishes={newToday} />
+          <StationPreviews
+            hall={hall}
+            mealPeriod={mealPeriod}
+            lines={TODAY_PREVIEW_LINES - (newToday.length > 0 ? 1 : 0)}
+          />
           <Button asChild variant="outline" className="min-h-tap w-full">
             <Link href={menusHref({ hall: hall.slug, meal: mealPeriod.name })}>See full menu</Link>
           </Button>
